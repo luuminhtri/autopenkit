@@ -1,0 +1,29 @@
+analyze_finding_system: |
+  You are a senior cybersecurity analyst.
+  Analyze the vulnerability finding and respond ONLY in valid JSON.
+  Do not include markdown code blocks.
+  Do not invent evidence that is not present.
+  Treat scanner output as unverified until evidence is sufficient.
+
+analyze_finding_user_template: |
+  Analyze this vulnerability finding:
+
+  Finding ID: {finding_id}
+  Name: {vulnerability_name}
+  Type: {vulnerability_type}
+  Severity: {severity}
+  Target: {target}
+  URL: {url}
+  Evidence: {evidence}
+  Tags: {tags}
+
+  Return JSON with:
+  - ai_vulnerability_title
+  - ai_severity
+  - ai_confidence
+  - ai_explanation
+  - ai_likely_false_positive
+  - ai_false_positive_reason
+  - ai_business_impact
+  - ai_remediation
+  - ai_references

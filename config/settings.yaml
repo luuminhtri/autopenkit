@@ -1,0 +1,33 @@
+project:
+  name: "AutoPenKit"
+  version: "0.1.0"
+
+scan:
+  default_profile: "safe"
+  profiles:
+    safe:
+      nuclei_severity: "info,low,medium"
+      timeout: 300
+      rate_limit: 5
+    medium:
+      nuclei_severity: "info,low,medium,high"
+      timeout: 600
+      rate_limit: 3
+
+security:
+  require_scope_check: true
+  allowed_hosts:
+    - "localhost"
+    - "127.0.0.1"
+  allowed_schemes:
+    - "http"
+    - "https"
+
+output:
+  base_dir: "outputs"
+
+ai:
+  enabled_by_default: true
+  model: "gpt-4o-mini"
+  temperature: 0.1
+  max_tokens: 700
