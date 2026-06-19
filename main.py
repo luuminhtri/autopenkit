@@ -1,5 +1,5 @@
 import argparse
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 import sys
 
@@ -54,7 +54,7 @@ def parse_args():
 
 
 def main():
-    started_at = datetime.utcnow()
+    started_at = datetime.now(timezone.utc)
 
     try:
         args = parse_args()
