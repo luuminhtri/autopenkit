@@ -9,6 +9,7 @@ sys.path.insert(0, str(SRC_PATH))
 
 from autopenkit.recon import build_initial_assets
 from autopenkit.models import ScanMetadata
+from autopenkit.scanner import run_nuclei_scan
 from autopenkit.utils import (
     create_scan_output_dir,
     get_profile_config,
@@ -63,7 +64,7 @@ def main():
         config = load_yaml_config(args.config)
 
         print_step("Checking scan profile...")
-        get_profile_config(config, args.profile)
+        profile_config = get_profile_config(config, args.profile)
 
         print_step("Validating target...")
         validated_target = validate_target(args.target, config)
@@ -85,7 +86,10 @@ def main():
             str(Path(output_dir) / "assets.json"),
         )
 
-        finished_at = datetime.utcnow()
+        print_step("Running scanner...")
+        scan_result = run_nuclei_scan(assets, output_dir, profile_config)
+
+        finished_at = datetime.now(timezone.utc)
         duration_seconds = (finished_at - started_at).total_seconds()
 
         print_step("Saving scan metadata...")
@@ -98,9 +102,10 @@ def main():
             started_at=started_at,
             finished_at=finished_at,
             duration_seconds=duration_seconds,
-            modules_run=["validator", "recon"],
-            tools_used=[],
+            modules_run=["validator", "recon", "scanner"],
+            tools_used=[scan_result["tool"]],
             total_assets=len(assets.live_urls),
+            total_raw_findings=scan_result["raw_findings_count"],
             ai_enabled=not args.skip_ai,
             output_dir=output_dir,
         )
@@ -110,7 +115,7 @@ def main():
             str(Path(output_dir) / "scan_metadata.json"),
         )
 
-        print_success("Phase 1 skeleton completed successfully.")
+        print_success("Phase 2 scanner integration completed successfully.")
         print_success(f"Output directory: {output_dir}")
 
     except Exception as error:

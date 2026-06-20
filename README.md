@@ -37,9 +37,9 @@ Do **not** use this tool on unauthorized systems.
 
 ## Current Status
 
-**Phase 1 — Project Skeleton**
+**Phase 2 — Scanner Integration**
 
-The project is currently focused on building a safe and clean foundation before adding scanning and AI analysis features.
+The project currently validates authorized targets, builds a basic asset list, and runs Nuclei against the live URLs discovered in recon.
 
 ---
 
@@ -93,9 +93,9 @@ autopenkit/
 
 ---
 
-## Phase 1 Goals
+## Phase 2 Goals
 
-In Phase 1, AutoPenKit should be able to:
+In Phase 2, AutoPenKit should be able to:
 
 * Run from the command line
 * Validate a target URL
@@ -103,6 +103,8 @@ In Phase 1, AutoPenKit should be able to:
 * Create a unique output folder for each scan
 * Generate basic scan metadata
 * Generate an initial asset list
+* Run Nuclei against the live URLs from recon
+* Save raw scanner output under `outputs/<scan_id>/raw/`
 
 ---
 
@@ -121,6 +123,9 @@ outputs/<scan_id>/
 ├── validated_target.json
 ├── scan_metadata.json
 └── assets.json
+└── raw/
+        ├── targets.txt
+        └── nuclei.jsonl
 ```
 
 ---
