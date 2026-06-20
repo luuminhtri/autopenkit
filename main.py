@@ -7,6 +7,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 SRC_PATH = PROJECT_ROOT / "src"
 sys.path.insert(0, str(SRC_PATH))
 
+from autopenkit.ai_analysis import analyze_scan_output
 from autopenkit.recon import build_initial_assets
 from autopenkit.models import ScanMetadata
 from autopenkit.normalizer import normalize_scan_output
@@ -60,10 +61,21 @@ def parse_args():
         ),
     )
 
+    parser.add_argument(
+        "--analyze-output-dir",
+        help=(
+            "Run AI analysis for an existing scan output directory containing "
+            "normalized_findings.json without running Nuclei again."
+        ),
+    )
+
     args = parser.parse_args()
 
-    if not args.target and not args.normalize_output_dir:
-        parser.error("--target is required unless --normalize-output-dir is provided")
+    if not args.target and not args.normalize_output_dir and not args.analyze_output_dir:
+        parser.error(
+            "--target is required unless --normalize-output-dir or "
+            "--analyze-output-dir is provided"
+        )
 
     return args
 
@@ -86,6 +98,22 @@ def main():
 
         print_step("Loading configuration...")
         config = load_yaml_config(args.config)
+
+        if args.analyze_output_dir:
+            print_step("Running AI analysis for existing output...")
+            ai_config = config.get("ai", {})
+            ai_should_run = ai_config.get("enabled_by_default", True) and not args.skip_ai
+            ai_result = analyze_scan_output(
+                args.analyze_output_dir,
+                ai_config,
+                prompts_path="config/prompts.yaml",
+                skip_ai=not ai_should_run,
+            )
+            print_success("AI analysis completed successfully.")
+            print_success(f"Analyzed findings: {ai_result['ai_analyzed_count']}")
+            print_success(f"Skipped findings: {ai_result['ai_skipped_count']}")
+            print_success(f"Output file: {ai_result['ai_output_path']}")
+            return
 
         print_step("Checking scan profile...")
         profile_config = get_profile_config(config, args.profile)
@@ -116,6 +144,16 @@ def main():
         print_step("Normalizing scanner output...")
         normalization_result = normalize_scan_output(output_dir)
 
+        print_step("Running AI analysis...")
+        ai_config = config.get("ai", {})
+        ai_should_run = ai_config.get("enabled_by_default", True) and not args.skip_ai
+        ai_result = analyze_scan_output(
+            output_dir,
+            ai_config,
+            prompts_path="config/prompts.yaml",
+            skip_ai=not ai_should_run,
+        )
+
         finished_at = datetime.now(timezone.utc)
         duration_seconds = (finished_at - started_at).total_seconds()
 
@@ -129,15 +167,16 @@ def main():
             started_at=started_at,
             finished_at=finished_at,
             duration_seconds=duration_seconds,
-            modules_run=["validator", "recon", "scanner", "normalizer"],
+            modules_run=["validator", "recon", "scanner", "normalizer", "ai_analysis"],
             tools_used=[scan_result["tool"]],
             total_assets=len(assets.live_urls),
             total_raw_findings=scan_result["raw_findings_count"],
             total_normalized_findings=normalization_result["normalized_findings_count"],
+            total_ai_analyzed_findings=ai_result["ai_analyzed_count"],
             findings_by_severity=normalization_result["findings_by_severity"],
             scan_status=scan_result["status"],
             scan_warning=scan_result.get("warning"),
-            ai_enabled=not args.skip_ai,
+            ai_enabled=ai_should_run,
             output_dir=output_dir,
         )
 
@@ -146,7 +185,7 @@ def main():
             str(Path(output_dir) / "scan_metadata.json"),
         )
 
-        print_success("Phase 3 normalization completed successfully.")
+        print_success("Phase 4 AI analysis completed successfully.")
         print_success(f"Output directory: {output_dir}")
 
     except Exception as error:

@@ -37,9 +37,9 @@ Do **not** use this tool on unauthorized systems.
 
 ## Current Status
 
-**Phase 3 — Result Normalization**
+**Phase 4 — AI-assisted Analysis**
 
-The project currently validates authorized targets, builds a basic asset list, runs Nuclei against the live URLs discovered in recon, stores raw JSON Lines output, and normalizes scanner findings into a unified JSON schema.
+The project currently validates authorized targets, builds a basic asset list, runs Nuclei against the live URLs discovered in recon, stores raw JSON Lines output, normalizes scanner findings into a unified JSON schema, and can generate AI-assisted analysis for each normalized finding.
 
 ---
 
@@ -110,6 +110,8 @@ AutoPenKit can currently:
 * Deduplicate findings
 * Sort findings by severity
 * Preserve partial findings if Nuclei times out after writing results
+* Generate AI-assisted analysis into `ai_analysis.json`
+* Skip or safely fall back when an AI API key is not configured
 
 ---
 
@@ -148,6 +150,36 @@ This is useful when reviewing existing scan output or regenerating `normalized_f
 
 ---
 
+## AI Analysis
+
+AutoPenKit currently supports Gemini for AI-assisted finding analysis.
+
+Create a local `.env` file from `.env.example` and set:
+
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
+```
+
+Do not commit `.env` or paste API keys into source files.
+
+To run AI analysis for an existing scan output directory:
+
+```bash
+python main.py --analyze-output-dir outputs/<scan_id>
+```
+
+To skip real AI calls while keeping pipeline output files consistent:
+
+```bash
+python main.py --target http://localhost:3000 --profile safe --skip-ai
+```
+
+When no API key is configured, AutoPenKit uses a safe placeholder analysis instead of failing the whole pipeline.
+
+AI analysis uses `normalized_findings.json` and can batch multiple findings per Gemini request. Configure `ai.batch_size` in `config/settings.yaml` to reduce daily request usage; the default is 5 findings per request. If a batch fails, AutoPenKit falls back to single-finding analysis before writing placeholders.
+
+---
+
 ## Expected Output
 
 ```text
@@ -159,6 +191,7 @@ outputs/<scan_id>/
 │   ├── targets.txt
 │   └── nuclei.jsonl
 ├── normalized_findings.json
+├── ai_analysis.json
 └── reports/
 ```
 

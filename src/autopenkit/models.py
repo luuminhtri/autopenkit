@@ -45,6 +45,23 @@ class NormalizedFinding(BaseModel):
     is_duplicate: bool = False
 
 
+class AIAnalysis(BaseModel):
+    finding_id: str
+    ai_vulnerability_title: str
+    ai_severity: str
+    ai_confidence: str
+    ai_explanation: str
+    ai_likely_false_positive: bool
+    ai_false_positive_reason: Optional[str] = None
+    ai_business_impact: str
+    ai_remediation: str
+    ai_references: List[str]
+    analyzed_at: datetime
+    model_used: str
+    provider: str
+    status: str = "analyzed"
+
+
 class ScanMetadata(BaseModel):
     scan_id: str
     project_name: str
@@ -59,6 +76,7 @@ class ScanMetadata(BaseModel):
     total_assets: int = 0
     total_raw_findings: int = 0
     total_normalized_findings: int = 0
+    total_ai_analyzed_findings: int = 0
     total_final_findings: int = 0
     findings_by_severity: dict = {
         "critical": 0,
