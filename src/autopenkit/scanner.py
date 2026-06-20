@@ -17,6 +17,7 @@ class NucleiScanError(RuntimeError):
 DEFAULT_NUCLEI_SEVERITY = "info,low,medium"
 DEFAULT_TIMEOUT_SECONDS = 300
 DEFAULT_RATE_LIMIT = 5
+DEFAULT_SCAN_STATUS = "completed"
 
 
 def check_nuclei_available() -> str:
@@ -59,6 +60,9 @@ def _build_nuclei_command(
     severity: str,
     rate_limit: int,
     json_flag: str,
+    tags: Optional[str] = None,
+    template_ids: Optional[List[str]] = None,
+    templates: Optional[List[str]] = None,
 ) -> List[str]:
     """
     Build a safe Nuclei command.
@@ -70,7 +74,7 @@ def _build_nuclei_command(
     - output is JSON Lines compatible
     """
 
-    return [
+    command = [
         nuclei_path,
         "-l",
         str(targets_file),
@@ -84,6 +88,17 @@ def _build_nuclei_command(
         "-o",
         str(output_file),
     ]
+
+    if tags:
+        command.extend(["-tags", tags])
+
+    if template_ids:
+        command.extend(["-id", ",".join(template_ids)])
+
+    if templates:
+        command.extend(["-templates", ",".join(templates)])
+
+    return command
 
 
 def _run_command(command: List[str], timeout: int) -> subprocess.CompletedProcess:
@@ -121,6 +136,49 @@ def count_jsonl_lines(path: Path) -> int:
         return sum(1 for line in file if line.strip())
 
 
+def _format_timeout_partial_result(
+    output_file: Path,
+    targets_file: Path,
+    command: List[str],
+    timeout: int,
+    severity: str,
+    rate_limit: int,
+    json_flag_used: str,
+    tags: Optional[str],
+    template_ids: List[str],
+    templates: List[str],
+    exc: subprocess.TimeoutExpired,
+) -> Dict[str, Any]:
+    raw_count = count_jsonl_lines(output_file)
+    if raw_count == 0:
+        raise TimeoutError(
+            f"Nuclei scan timed out after {timeout} seconds. "
+            "Try a smaller target scope or increase the safe profile timeout."
+        ) from exc
+
+    return {
+        "tool": "nuclei",
+        "status": "timeout_partial",
+        "raw_output_path": str(output_file),
+        "targets_file": str(targets_file),
+        "json_flag_used": json_flag_used,
+        "severity": severity,
+        "rate_limit": rate_limit,
+        "timeout": timeout,
+        "tags": tags,
+        "template_ids": template_ids,
+        "templates": templates,
+        "command": command,
+        "raw_findings_count": raw_count,
+        "stdout": (exc.stdout or "").strip(),
+        "stderr": (exc.stderr or "").strip(),
+        "warning": (
+            f"Nuclei timed out after {timeout} seconds, but partial raw findings "
+            "were saved and will be normalized."
+        ),
+    }
+
+
 def run_nuclei_scan(
     assets: AssetsOutput,
     output_dir: str,
@@ -153,6 +211,10 @@ def run_nuclei_scan(
     severity = str(profile_config.get("nuclei_severity", DEFAULT_NUCLEI_SEVERITY))
     timeout = int(profile_config.get("timeout", DEFAULT_TIMEOUT_SECONDS))
     rate_limit = int(profile_config.get("rate_limit", DEFAULT_RATE_LIMIT))
+    tags = profile_config.get("nuclei_tags")
+    tags = str(tags) if tags else None
+    template_ids = profile_config.get("nuclei_template_ids") or []
+    templates = profile_config.get("nuclei_templates") or []
 
     targets_file = write_targets_file(assets.live_urls, output_dir)
 
@@ -166,17 +228,29 @@ def run_nuclei_scan(
         severity=severity,
         rate_limit=rate_limit,
         json_flag="-jsonl",
+        tags=tags,
+        template_ids=template_ids,
+        templates=templates,
     )
+
+    json_flag_used = "-jsonl"
 
     try:
         result = _run_command(command, timeout=timeout)
     except subprocess.TimeoutExpired as exc:
-        raise TimeoutError(
-            f"Nuclei scan timed out after {timeout} seconds. "
-            "Try a smaller target scope or increase the safe profile timeout."
-        ) from exc
-
-    json_flag_used = "-jsonl"
+        return _format_timeout_partial_result(
+            output_file=output_file,
+            targets_file=targets_file,
+            command=command,
+            timeout=timeout,
+            severity=severity,
+            rate_limit=rate_limit,
+            json_flag_used=json_flag_used,
+            tags=tags,
+            template_ids=template_ids,
+            templates=templates,
+            exc=exc,
+        )
 
     if result.returncode != 0 and _should_retry_with_json(result.stderr):
         command = _build_nuclei_command(
@@ -186,16 +260,28 @@ def run_nuclei_scan(
             severity=severity,
             rate_limit=rate_limit,
             json_flag="-json",
+            tags=tags,
+            template_ids=template_ids,
+            templates=templates,
         )
         json_flag_used = "-json"
 
         try:
             result = _run_command(command, timeout=timeout)
         except subprocess.TimeoutExpired as exc:
-            raise TimeoutError(
-                f"Nuclei scan timed out after {timeout} seconds. "
-                "Try a smaller target scope or increase the safe profile timeout."
-            ) from exc
+            return _format_timeout_partial_result(
+                output_file=output_file,
+                targets_file=targets_file,
+                command=command,
+                timeout=timeout,
+                severity=severity,
+                rate_limit=rate_limit,
+                json_flag_used=json_flag_used,
+                tags=tags,
+                template_ids=template_ids,
+                templates=templates,
+                exc=exc,
+            )
 
     if result.returncode != 0:
         raise NucleiScanError(
@@ -210,12 +296,17 @@ def run_nuclei_scan(
 
     return {
         "tool": "nuclei",
+        "status": DEFAULT_SCAN_STATUS,
         "raw_output_path": str(output_file),
         "targets_file": str(targets_file),
         "json_flag_used": json_flag_used,
         "severity": severity,
         "rate_limit": rate_limit,
         "timeout": timeout,
+        "tags": tags,
+        "template_ids": template_ids,
+        "templates": templates,
+        "command": command,
         "raw_findings_count": count_jsonl_lines(output_file),
         "stdout": result.stdout.strip(),
         "stderr": result.stderr.strip(),

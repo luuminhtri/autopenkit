@@ -37,9 +37,9 @@ Do **not** use this tool on unauthorized systems.
 
 ## Current Status
 
-**Phase 2 — Scanner Integration**
+**Phase 3 — Result Normalization**
 
-The project currently validates authorized targets, builds a basic asset list, and runs Nuclei against the live URLs discovered in recon.
+The project currently validates authorized targets, builds a basic asset list, runs Nuclei against the live URLs discovered in recon, stores raw JSON Lines output, and normalizes scanner findings into a unified JSON schema.
 
 ---
 
@@ -93,9 +93,9 @@ autopenkit/
 
 ---
 
-## Phase 2 Goals
+## Implemented MVP Flow
 
-In Phase 2, AutoPenKit should be able to:
+AutoPenKit can currently:
 
 * Run from the command line
 * Validate a target URL
@@ -103,16 +103,48 @@ In Phase 2, AutoPenKit should be able to:
 * Create a unique output folder for each scan
 * Generate basic scan metadata
 * Generate an initial asset list
-* Run Nuclei against the live URLs from recon
+* Run Nuclei against the live URLs from recon using a safe profile
 * Save raw scanner output under `outputs/<scan_id>/raw/`
+* Parse Nuclei JSON Lines output
+* Normalize raw scanner findings into `normalized_findings.json`
+* Deduplicate findings
+* Sort findings by severity
+* Preserve partial findings if Nuclei times out after writing results
 
 ---
 
-## Expected Command
+## Full Scan Command
 
 ```bash
 python main.py --target http://localhost:3000 --profile safe
 ```
+
+Example authorized public lab target:
+
+```bash
+python main.py --target https://demo.testfire.net/ --profile safe
+```
+
+The `safe` profile limits Nuclei by severity and tags to keep scans suitable for MVP use:
+
+```yaml
+nuclei_severity: "info,low,medium"
+nuclei_tags: "exposure,misconfig,headers"
+timeout: 300
+rate_limit: 5
+```
+
+---
+
+## Normalize Existing Output
+
+If a scan already produced `raw/nuclei.jsonl`, AutoPenKit can normalize it without running Nuclei again:
+
+```bash
+python main.py --normalize-output-dir outputs/<scan_id>
+```
+
+This is useful when reviewing existing scan output or regenerating `normalized_findings.json`.
 
 ---
 
@@ -122,11 +154,20 @@ python main.py --target http://localhost:3000 --profile safe
 outputs/<scan_id>/
 ├── validated_target.json
 ├── scan_metadata.json
-└── assets.json
-└── raw/
-        ├── targets.txt
-        └── nuclei.jsonl
+├── assets.json
+├── raw/
+│   ├── targets.txt
+│   └── nuclei.jsonl
+├── normalized_findings.json
+└── reports/
 ```
+
+`scan_metadata.json` includes `scan_status`. Possible current values include:
+
+* `completed`
+* `timeout_partial`
+
+When `scan_status` is `timeout_partial`, Nuclei reached the configured timeout, but AutoPenKit still keeps any raw findings already written to `raw/nuclei.jsonl` and continues normalization.
 
 ---
 
@@ -147,10 +188,11 @@ Any external target must be explicitly added to the authorized scope in the conf
 
 Possible future improvements include:
 
-* Nuclei scanner integration
 * AI-assisted vulnerability analysis
+* Result merger
 * Markdown and HTML report generation
 * PDF export
+* Stronger scan profiles such as `medium` and `deep`
 * Nmap reconnaissance
 * Nikto scanner support
 * Shodan integration

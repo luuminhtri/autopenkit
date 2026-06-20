@@ -28,6 +28,23 @@ class AssetsOutput(BaseModel):
     live_urls: List[str]
 
 
+class NormalizedFinding(BaseModel):
+    finding_id: str
+    target: str
+    asset: str
+    vulnerability_name: str
+    vulnerability_type: str
+    severity: str
+    severity_score: int
+    source_tool: str
+    template_id: str
+    evidence: str
+    url: str
+    tags: List[str]
+    timestamp: Optional[str] = None
+    is_duplicate: bool = False
+
+
 class ScanMetadata(BaseModel):
     scan_id: str
     project_name: str
@@ -50,5 +67,7 @@ class ScanMetadata(BaseModel):
         "low": 0,
         "info": 0,
     }
+    scan_status: str = "completed"
+    scan_warning: Optional[str] = None
     ai_enabled: bool
     output_dir: str

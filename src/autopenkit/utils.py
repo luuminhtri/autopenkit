@@ -56,8 +56,16 @@ def save_json(data: Any, path: str) -> None:
     output_path = Path(path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    if hasattr(data, "model_dump"):
-        data = data.model_dump(mode="json")
+    def serialize(value: Any) -> Any:
+        if hasattr(value, "model_dump"):
+            return value.model_dump(mode="json")
+        if isinstance(value, list):
+            return [serialize(item) for item in value]
+        if isinstance(value, dict):
+            return {key: serialize(item) for key, item in value.items()}
+        return value
+
+    data = serialize(data)
 
     with open(output_path, "w", encoding="utf-8") as file:
         json.dump(data, file, indent=2, ensure_ascii=False)

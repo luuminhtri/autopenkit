@@ -9,6 +9,7 @@ sys.path.insert(0, str(SRC_PATH))
 
 from autopenkit.recon import build_initial_assets
 from autopenkit.models import ScanMetadata
+from autopenkit.normalizer import normalize_scan_output
 from autopenkit.scanner import run_nuclei_scan
 from autopenkit.utils import (
     create_scan_output_dir,
@@ -29,7 +30,7 @@ def parse_args():
 
     parser.add_argument(
         "--target",
-        required=True,
+        required=False,
         help="Authorized target URL, for example: http://localhost:3000",
     )
 
@@ -51,7 +52,20 @@ def parse_args():
         help="Skip AI analysis",
     )
 
-    return parser.parse_args()
+    parser.add_argument(
+        "--normalize-output-dir",
+        help=(
+            "Normalize an existing scan output directory containing raw/nuclei.jsonl "
+            "without running Nuclei again."
+        ),
+    )
+
+    args = parser.parse_args()
+
+    if not args.target and not args.normalize_output_dir:
+        parser.error("--target is required unless --normalize-output-dir is provided")
+
+    return args
 
 
 def main():
@@ -59,6 +73,16 @@ def main():
 
     try:
         args = parse_args()
+
+        if args.normalize_output_dir:
+            print_step("Normalizing existing scanner output...")
+            normalization_result = normalize_scan_output(args.normalize_output_dir)
+            print_success("Normalization completed successfully.")
+            print_success(
+                f"Normalized findings: {normalization_result['normalized_findings_count']}"
+            )
+            print_success(f"Output file: {normalization_result['normalized_output_path']}")
+            return
 
         print_step("Loading configuration...")
         config = load_yaml_config(args.config)
@@ -89,6 +113,9 @@ def main():
         print_step("Running scanner...")
         scan_result = run_nuclei_scan(assets, output_dir, profile_config)
 
+        print_step("Normalizing scanner output...")
+        normalization_result = normalize_scan_output(output_dir)
+
         finished_at = datetime.now(timezone.utc)
         duration_seconds = (finished_at - started_at).total_seconds()
 
@@ -102,10 +129,14 @@ def main():
             started_at=started_at,
             finished_at=finished_at,
             duration_seconds=duration_seconds,
-            modules_run=["validator", "recon", "scanner"],
+            modules_run=["validator", "recon", "scanner", "normalizer"],
             tools_used=[scan_result["tool"]],
             total_assets=len(assets.live_urls),
             total_raw_findings=scan_result["raw_findings_count"],
+            total_normalized_findings=normalization_result["normalized_findings_count"],
+            findings_by_severity=normalization_result["findings_by_severity"],
+            scan_status=scan_result["status"],
+            scan_warning=scan_result.get("warning"),
             ai_enabled=not args.skip_ai,
             output_dir=output_dir,
         )
@@ -115,7 +146,7 @@ def main():
             str(Path(output_dir) / "scan_metadata.json"),
         )
 
-        print_success("Phase 2 scanner integration completed successfully.")
+        print_success("Phase 3 normalization completed successfully.")
         print_success(f"Output directory: {output_dir}")
 
     except Exception as error:

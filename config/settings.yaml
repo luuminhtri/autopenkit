@@ -7,6 +7,7 @@ scan:
   profiles:
     safe:
       nuclei_severity: "info,low,medium"
+      nuclei_tags: "exposure,misconfig,headers"
       timeout: 300
       rate_limit: 5
     medium:
@@ -19,6 +20,9 @@ security:
   allowed_hosts:
     - "localhost"
     - "127.0.0.1"
+    - "demo.testfire.net"
+    - "testphp.vulnweb.com"
+    - "testaspnet.vulnweb.com"
   allowed_schemes:
     - "http"
     - "https"
