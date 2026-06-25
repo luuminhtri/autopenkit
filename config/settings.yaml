@@ -14,6 +14,10 @@ scan:
       nuclei_severity: "info,low,medium,high"
       timeout: 600
       rate_limit: 3
+    deep:
+      nuclei_severity: "info,low,medium,high,critical"
+      timeout: 1200
+      rate_limit: 2
 
 security:
   require_scope_check: true

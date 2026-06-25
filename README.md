@@ -39,7 +39,7 @@ Do **not** use this tool on unauthorized systems.
 
 **Phase 5 complete — entering Phase 6: Testing, documentation, and demo**
 
-The project currently validates authorized targets, builds a basic asset list, runs Nuclei against the live URLs discovered in recon, stores raw JSON Lines output, normalizes scanner findings into a unified JSON schema, generates AI-assisted analysis for each normalized finding, merges scanner and AI results into final findings, and renders Markdown plus HTML reports.
+The project currently validates authorized targets, builds a basic asset list, runs Nuclei against the live URLs discovered in recon, stores raw JSON Lines output, normalizes scanner findings into a unified JSON schema, generates AI-assisted analysis for each normalized finding, merges scanner and AI results into final findings, and renders Markdown, HTML, plus PDF reports.
 
 ---
 
@@ -113,7 +113,8 @@ AutoPenKit can currently:
 * Generate AI-assisted analysis into `ai_analysis.json`
 * Ask AI to assess evidence quality, confidence rationale, validation status, remediation owner, and safe follow-up scan focus
 * Generate step-by-step verification and remediation guidance for authorized site owners
-* Generate an AI executive action plan in Markdown and HTML reports
+* Generate an AI executive action plan in Markdown, HTML, and PDF reports
+* Generate portfolio-level summary, remediation themes, and validation priorities for larger result sets
 * Merge normalized scanner results and AI analysis into `final_findings.json`
 * Regenerate reports from an existing output directory without rerunning Nuclei
 * Skip or safely fall back when an AI API key is not configured
@@ -139,6 +140,26 @@ nuclei_severity: "info,low,medium"
 nuclei_tags: "exposure,misconfig,headers"
 timeout: 300
 rate_limit: 5
+```
+
+Available scan profiles:
+
+| Profile | Intended use | Severity scope | Notes |
+|---|---|---|---|
+| `safe` | Default MVP scans and demos | `info,low,medium` | Uses exposure, misconfiguration, and header tags to keep scan scope narrow. |
+| `medium` | Broader authorized review | `info,low,medium,high` | Removes the tag filter and runs more slowly to reduce target pressure. |
+| `deep` | Most comprehensive authorized lab scan | `info,low,medium,high,critical` | Uses the longest timeout and lowest rate limit. Expect slower runs and more results. |
+
+Example stronger profile run:
+
+```bash
+python main.py --target https://demo.testfire.net/ --profile medium
+```
+
+Use `deep` only for explicitly authorized lab or owned targets:
+
+```bash
+python main.py --target http://localhost:3000 --profile deep
 ```
 
 ---
@@ -208,6 +229,7 @@ This writes or refreshes:
 * `final_findings.json`
 * `reports/report.md`
 * `reports/report.html`
+* `reports/report.pdf`
 * `scan_metadata.json` report timestamps and report paths
 
 ---
@@ -227,7 +249,8 @@ outputs/<scan_id>/
 ├── final_findings.json
 └── reports/
     ├── report.md
-    └── report.html
+    ├── report.html
+    └── report.pdf
 ```
 
 `scan_metadata.json` includes `scan_status`. Possible current values include:
@@ -256,9 +279,6 @@ Any external target must be explicitly added to the authorized scope in the conf
 
 Possible future improvements include:
 
-* PDF export for generated reports
-* Stronger AI summary generation across larger result sets
-* Stronger scan profiles such as `medium` and `deep`
 * Nmap reconnaissance
 * Nikto scanner support
 * Shodan integration

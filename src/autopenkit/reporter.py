@@ -1,9 +1,24 @@
 import json
 from datetime import datetime, timezone
+from html import escape
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import inch
+from reportlab.platypus import (
+    ListFlowable,
+    ListItem,
+    PageBreak,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
 
 from autopenkit.models import FinalFinding
 from autopenkit.merger import count_final_findings_by_severity, merge_scan_output
@@ -61,6 +76,263 @@ def _update_report_metadata(
         json.dump(metadata, file, indent=2, ensure_ascii=False)
 
 
+def _paragraph(text: Any, style: ParagraphStyle) -> Paragraph:
+    value = "" if text is None else str(text)
+    return Paragraph(escape(value), style)
+
+
+def _bullet_list(items: List[str], style: ParagraphStyle) -> ListFlowable:
+    flowables = [
+        ListItem(_paragraph(item, style), leftIndent=12)
+        for item in items
+        if str(item).strip()
+    ]
+    return ListFlowable(flowables, bulletType="bullet", start="circle")
+
+
+def _numbered_list(items: List[str], style: ParagraphStyle) -> ListFlowable:
+    flowables = [
+        ListItem(_paragraph(item, style), leftIndent=12)
+        for item in items
+        if str(item).strip()
+    ]
+    return ListFlowable(flowables, bulletType="1")
+
+
+def _table(rows: List[List[Any]], col_widths: List[float]) -> Table:
+    table = Table(rows, colWidths=col_widths, hAlign="LEFT", repeatRows=1)
+    table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#111827")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, -1), 8),
+                ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#d1d5db")),
+                ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#f9fafb")),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                ("TOPPADDING", (0, 0), (-1, -1), 5),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ]
+        )
+    )
+    return table
+
+
+def _draw_footer(canvas, doc) -> None:
+    canvas.saveState()
+    canvas.setFont("Helvetica", 8)
+    canvas.setFillColor(colors.HexColor("#6b7280"))
+    canvas.drawRightString(
+        A4[0] - doc.rightMargin,
+        0.45 * inch,
+        f"AutoPenKit Security Report - Page {doc.page}",
+    )
+    canvas.restoreState()
+
+
+def _render_pdf_report(context: Dict[str, Any], pdf_path: Path) -> None:
+    styles = getSampleStyleSheet()
+    styles.add(
+        ParagraphStyle(
+            name="ReportTitle",
+            parent=styles["Title"],
+            fontName="Helvetica-Bold",
+            fontSize=20,
+            leading=24,
+            textColor=colors.HexColor("#111827"),
+            spaceAfter=12,
+        )
+    )
+    styles.add(
+        ParagraphStyle(
+            name="SectionHeading",
+            parent=styles["Heading2"],
+            fontName="Helvetica-Bold",
+            fontSize=13,
+            leading=16,
+            textColor=colors.HexColor("#1f2937"),
+            spaceBefore=12,
+            spaceAfter=8,
+        )
+    )
+    body = styles["BodyText"]
+    body.fontSize = 9
+    body.leading = 12
+    small = ParagraphStyle("Small", parent=body, fontSize=8, leading=10)
+
+    metadata = context["metadata"]
+    assets = context["assets"]
+    findings = context["findings"]
+    severity = context["findings_by_severity"]
+    portfolio_summary = context["portfolio_summary"]
+    target = metadata.get("target") or "unknown"
+
+    story = [
+        _paragraph(
+            f"{metadata.get('project_name', 'AutoPenKit')} Security Assessment Report",
+            styles["ReportTitle"],
+        ),
+        _table(
+            [
+                ["Field", "Value"],
+                ["Target", target],
+                ["Profile", metadata.get("profile", "unknown")],
+                ["Scan status", metadata.get("scan_status", "unknown")],
+                ["Overall risk", context["risk_level"]],
+                ["Generated at", context["generated_at"]],
+            ],
+            [1.5 * inch, 4.8 * inch],
+        ),
+        Spacer(1, 0.15 * inch),
+        _paragraph("1. Executive Summary", styles["SectionHeading"]),
+        _paragraph(portfolio_summary["headline"], body),
+        Spacer(1, 0.1 * inch),
+        _table(
+            [
+                ["Metric", "Value"],
+                ["Live assets", metadata.get("total_assets", len(assets.get("live_urls", [])))],
+                ["Raw scanner findings", metadata.get("total_raw_findings", "N/A")],
+                ["Normalized findings", metadata.get("total_normalized_findings", "N/A")],
+                ["Final findings", context["finding_count"]],
+                ["AI-analyzed findings", metadata.get("total_ai_analyzed_findings", context["ai_analyzed_count"])],
+            ],
+            [2.6 * inch, 3.7 * inch],
+        ),
+        _paragraph("Key Observations", styles["Heading4"]),
+        _bullet_list(portfolio_summary["key_observations"], body),
+        _paragraph("Remediation Themes", styles["Heading4"]),
+        _bullet_list(portfolio_summary["remediation_themes"], body),
+        _paragraph("Validation Priorities", styles["Heading4"]),
+        _bullet_list(portfolio_summary["validation_priorities"], body),
+        _paragraph("2. Severity Breakdown", styles["SectionHeading"]),
+        _table(
+            [
+                ["Severity", "Count"],
+                ["Critical", severity["critical"]],
+                ["High", severity["high"]],
+                ["Medium", severity["medium"]],
+                ["Low", severity["low"]],
+                ["Info", severity["info"]],
+            ],
+            [2.6 * inch, 3.7 * inch],
+        ),
+        _paragraph("3. Scope", styles["SectionHeading"]),
+    ]
+
+    live_urls = assets.get("live_urls", [])
+    if live_urls:
+        story.append(_bullet_list(live_urls, body))
+    else:
+        story.append(_paragraph("No live URLs were recorded for this scan.", body))
+
+    story.extend(
+        [
+            _paragraph("4. Finding Overview", styles["SectionHeading"]),
+        ]
+    )
+    if findings:
+        overview_rows = [["ID", "Severity", "Owner", "Title", "URL"]]
+        for finding in findings:
+            overview_rows.append(
+                [
+                    _paragraph(finding["finding_id"], small),
+                    _paragraph(finding["final_severity"].upper(), small),
+                    _paragraph(finding.get("ai_remediation_owner") or "site owner", small),
+                    _paragraph(
+                        finding.get("ai_vulnerability_title")
+                        or finding["vulnerability_name"],
+                        small,
+                    ),
+                    _paragraph(finding["url"], small),
+                ]
+            )
+        story.append(_table(overview_rows, [0.65 * inch, 0.7 * inch, 1.0 * inch, 2.0 * inch, 1.95 * inch]))
+    else:
+        story.append(_paragraph("No findings were produced.", body))
+
+    story.append(PageBreak())
+    story.append(_paragraph("5. Detailed Findings", styles["SectionHeading"]))
+    if findings:
+        for index, finding in enumerate(findings):
+            if index:
+                story.append(Spacer(1, 0.15 * inch))
+            title = finding.get("ai_vulnerability_title") or finding["vulnerability_name"]
+            story.append(
+                _paragraph(
+                    f"{finding['finding_id']} - {title}",
+                    styles["Heading3"],
+                )
+            )
+            story.append(
+                _table(
+                    [
+                        ["Field", "Value"],
+                        ["Final severity", finding["final_severity"].upper()],
+                        ["Scanner severity", finding["severity"].upper()],
+                        ["AI confidence", finding.get("ai_confidence") or "unknown"],
+                        ["Validation status", finding.get("ai_validation_status") or "needs_manual_validation"],
+                        ["Affected location", finding.get("ai_affected_location") or finding["url"]],
+                    ],
+                    [1.5 * inch, 4.8 * inch],
+                )
+            )
+            story.append(Spacer(1, 0.08 * inch))
+            story.append(_paragraph("Evidence", styles["Heading4"]))
+            story.append(_paragraph(finding["evidence"], body))
+            story.append(_paragraph("Analysis", styles["Heading4"]))
+            story.append(
+                _paragraph(
+                    finding.get("ai_explanation")
+                    or "No AI explanation was available. Manual validation is recommended.",
+                    body,
+                )
+            )
+            story.append(_paragraph("Recommended Remediation", styles["Heading4"]))
+            story.append(
+                _paragraph(
+                    finding.get("ai_remediation")
+                    or "Validate the finding and follow the source tool guidance.",
+                    body,
+                )
+            )
+            if finding.get("ai_owner_remediation_steps"):
+                story.append(_paragraph("Owner Remediation Steps", styles["Heading4"]))
+                story.append(_numbered_list(finding["ai_owner_remediation_steps"], body))
+            if finding.get("ai_fix_validation_steps"):
+                story.append(_paragraph("How to Confirm Fixed", styles["Heading4"]))
+                story.append(_numbered_list(finding["ai_fix_validation_steps"], body))
+            if finding.get("ai_references"):
+                story.append(_paragraph("References", styles["Heading4"]))
+                story.append(_bullet_list(finding["ai_references"], body))
+    else:
+        story.append(_paragraph("No detailed findings are available.", body))
+
+    story.append(_paragraph("6. Notes", styles["SectionHeading"]))
+    story.append(
+        _bullet_list(
+            [
+                "AI-assisted analysis supports triage and should be manually validated before remediation decisions.",
+                "Severity may be adjusted during final review when business context or exploitability differs from scanner output.",
+            ],
+            body,
+        )
+    )
+
+    document = SimpleDocTemplate(
+        str(pdf_path),
+        pagesize=A4,
+        leftMargin=0.65 * inch,
+        rightMargin=0.65 * inch,
+        topMargin=0.7 * inch,
+        bottomMargin=0.7 * inch,
+        title=f"AutoPenKit Security Report - {target}",
+    )
+    document.build(story, onFirstPage=_draw_footer, onLaterPages=_draw_footer)
+
+
 def build_report_context(output_dir: str) -> Dict[str, Any]:
     output_path = Path(output_dir)
     final_findings = _load_final_findings(output_path)
@@ -69,6 +341,11 @@ def build_report_context(output_dir: str) -> Dict[str, Any]:
     findings_by_severity = count_final_findings_by_severity(final_findings)
     risk_level = _overall_risk_level(findings_by_severity)
     executive_action_plan = _build_executive_action_plan(final_findings)
+    portfolio_summary = _build_portfolio_summary(
+        final_findings,
+        findings_by_severity,
+        risk_level,
+    )
     ai_analyzed_count = sum(
         1 for finding in final_findings if finding.ai_status == "analyzed"
     )
@@ -81,6 +358,7 @@ def build_report_context(output_dir: str) -> Dict[str, Any]:
         "ai_analyzed_count": ai_analyzed_count,
         "findings_by_severity": findings_by_severity,
         "risk_level": risk_level,
+        "portfolio_summary": portfolio_summary,
         "executive_action_plan": executive_action_plan,
         "follow_up_scan_recommendations": _collect_follow_up_scan_recommendations(
             final_findings
@@ -101,6 +379,138 @@ def _overall_risk_level(findings_by_severity: Dict[str, int]) -> str:
     if findings_by_severity.get("info", 0) > 0:
         return "Informational"
     return "No Findings"
+
+
+def _highest_severity(findings_by_severity: Dict[str, int]) -> str:
+    for severity in ["critical", "high", "medium", "low", "info"]:
+        if findings_by_severity.get(severity, 0) > 0:
+            return severity
+    return "none"
+
+
+def _top_counts(values: List[str], limit: int = 3) -> List[Tuple[str, int]]:
+    counts: Dict[str, int] = {}
+    for value in values:
+        normalized = (value or "unknown").strip() or "unknown"
+        counts[normalized] = counts.get(normalized, 0) + 1
+
+    return sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:limit]
+
+
+def _pluralize_findings(count: int) -> str:
+    return "finding" if count == 1 else "findings"
+
+
+def _build_portfolio_summary(
+    findings: List[FinalFinding],
+    findings_by_severity: Dict[str, int],
+    risk_level: str,
+) -> Dict[str, Any]:
+    finding_count = len(findings)
+    if finding_count == 0:
+        return {
+            "headline": (
+                "No final findings were produced. Keep this report as evidence of "
+                "the authorized scan scope and rerun with the right profile if coverage "
+                "needs to expand."
+            ),
+            "key_observations": [
+                "No scanner evidence was consolidated into final findings.",
+                "Manual review should confirm the target and scan profile were appropriate.",
+            ],
+            "remediation_themes": [
+                "No remediation themes were identified from this scan output.",
+            ],
+            "validation_priorities": [
+                "Confirm the scan completed against the intended authorized target.",
+            ],
+        }
+
+    highest_severity = _highest_severity(findings_by_severity)
+    analyzed_count = sum(1 for finding in findings if finding.ai_status == "analyzed")
+    likely_false_positive_count = sum(
+        1 for finding in findings if finding.ai_likely_false_positive
+    )
+    validation_counts = _top_counts(
+        [
+            finding.ai_validation_status or "needs_manual_validation"
+            for finding in findings
+        ]
+    )
+    owner_counts = _top_counts(
+        [finding.ai_remediation_owner or "site owner" for finding in findings]
+    )
+    technology_counts = _top_counts(
+        [
+            finding.ai_technology_context
+            or finding.vulnerability_type
+            or finding.template_id
+            for finding in findings
+        ]
+    )
+
+    headline = (
+        f"AutoPenKit consolidated {finding_count} final "
+        f"{_pluralize_findings(finding_count)}. The highest final severity is "
+        f"{highest_severity.upper()}, producing an overall {risk_level} risk rating."
+    )
+
+    key_observations = [
+        (
+            f"{analyzed_count} of {finding_count} "
+            f"{_pluralize_findings(finding_count)} include AI-assisted triage."
+        ),
+        (
+            f"Validation status concentration: "
+            f"{', '.join(f'{status} ({count})' for status, count in validation_counts)}."
+        ),
+        (
+            f"{likely_false_positive_count} "
+            f"{_pluralize_findings(likely_false_positive_count)} were marked as likely "
+            "false positives by AI and should be manually checked before closure."
+        ),
+    ]
+
+    remediation_themes = [
+        (
+            f"{owner} owns {count} {_pluralize_findings(count)} in the current report."
+        )
+        for owner, count in owner_counts
+    ]
+    remediation_themes.extend(
+        [
+            (
+                f"Technology/theme focus: {technology} appears in {count} "
+                f"{_pluralize_findings(count)}."
+            )
+            for technology, count in technology_counts
+        ]
+    )
+
+    sorted_findings = sorted(
+        findings,
+        key=lambda finding: (
+            -finding.final_severity_score,
+            finding.finding_id,
+        ),
+    )
+    validation_priorities = []
+    for finding in sorted_findings[:5]:
+        title = finding.ai_vulnerability_title or finding.vulnerability_name
+        status = finding.ai_validation_status or "needs_manual_validation"
+        validation_priorities.append(
+            (
+                f"{finding.finding_id} ({finding.final_severity.upper()}): "
+                f"{title} - {status}. Next: {_first_step(finding)}"
+            )
+        )
+
+    return {
+        "headline": headline,
+        "key_observations": key_observations,
+        "remediation_themes": remediation_themes,
+        "validation_priorities": validation_priorities,
+    }
 
 
 def _recommended_timeline(finding: FinalFinding) -> str:
@@ -186,6 +596,10 @@ def generate_reports(
     html_path = reports_dir / "report.html"
     html_path.write_text(html_report, encoding="utf-8")
     report_paths["html"] = str(html_path)
+
+    pdf_path = reports_dir / "report.pdf"
+    _render_pdf_report(context, pdf_path)
+    report_paths["pdf"] = str(pdf_path)
 
     _update_report_metadata(output_path, report_paths, context["generated_at"])
 

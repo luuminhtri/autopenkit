@@ -5,6 +5,7 @@ import pytest
 
 from autopenkit.models import AssetHost, AssetsOutput
 from autopenkit.scanner import _build_nuclei_command, run_nuclei_scan
+from autopenkit.utils import get_profile_config, load_yaml_config
 
 
 def assets_output():
@@ -43,6 +44,40 @@ def test_build_nuclei_command_includes_safe_filters(tmp_path):
     assert command[command.index("-id") + 1] == "swagger-api,missing-security-headers"
     assert "-templates" in command
     assert command[command.index("-templates") + 1] == "http/exposures"
+
+
+def test_scan_profiles_define_safe_medium_and_deep_levels():
+    config = load_yaml_config("config/settings.yaml")
+
+    safe = get_profile_config(config, "safe")
+    medium = get_profile_config(config, "medium")
+    deep = get_profile_config(config, "deep")
+
+    assert safe["nuclei_severity"] == "info,low,medium"
+    assert safe["nuclei_tags"] == "exposure,misconfig,headers"
+    assert medium["nuclei_severity"] == "info,low,medium,high"
+    assert "nuclei_tags" not in medium
+    assert deep["nuclei_severity"] == "info,low,medium,high,critical"
+    assert "nuclei_tags" not in deep
+    assert deep["timeout"] > medium["timeout"] > safe["timeout"]
+    assert deep["rate_limit"] < medium["rate_limit"] < safe["rate_limit"]
+
+
+def test_build_nuclei_command_omits_optional_filters_for_deep_profile(tmp_path):
+    command = _build_nuclei_command(
+        nuclei_path="/usr/local/bin/nuclei",
+        targets_file=tmp_path / "targets.txt",
+        output_file=tmp_path / "nuclei.jsonl",
+        severity="info,low,medium,high,critical",
+        rate_limit=2,
+        json_flag="-jsonl",
+    )
+
+    assert command[command.index("-severity") + 1] == "info,low,medium,high,critical"
+    assert command[command.index("-rate-limit") + 1] == "2"
+    assert "-tags" not in command
+    assert "-id" not in command
+    assert "-templates" not in command
 
 
 def test_run_nuclei_scan_returns_partial_result_when_timeout_has_findings(

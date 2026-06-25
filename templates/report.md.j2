@@ -10,7 +10,7 @@
 
 ## 1. Executive Summary
 
-This report summarizes the automated security assessment results for `{{ metadata.target | default("the target", true) }}`. Findings were collected from scanner output, normalized into a consistent schema, enriched with AI-assisted analysis when available, and consolidated into final findings for review.
+{{ portfolio_summary.headline }}
 
 | Metric | Value |
 |---|---:|
@@ -19,6 +19,24 @@ This report summarizes the automated security assessment results for `{{ metadat
 | Normalized findings | {{ metadata.total_normalized_findings | default("N/A", true) }} |
 | Final findings | {{ finding_count }} |
 | AI-analyzed findings | {{ metadata.total_ai_analyzed_findings | default(ai_analyzed_count, true) }} |
+
+**Key Observations**
+
+{% for observation in portfolio_summary.key_observations -%}
+- {{ observation }}
+{% endfor %}
+
+**Remediation Themes**
+
+{% for theme in portfolio_summary.remediation_themes -%}
+- {{ theme }}
+{% endfor %}
+
+**Validation Priorities**
+
+{% for priority in portfolio_summary.validation_priorities -%}
+- {{ priority }}
+{% endfor %}
 
 ## 2. AI Executive Action Plan
 

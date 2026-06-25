@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 from autopenkit.merger import merge_findings, merge_scan_output
 from autopenkit.models import AIAnalysis, NormalizedFinding
-from autopenkit.reporter import generate_reports
+from autopenkit.reporter import build_report_context, generate_reports
 
 
 def normalized_finding(finding_id="FIND-001", severity="info", severity_score=1):
@@ -154,22 +154,36 @@ def test_generate_reports_writes_markdown_and_html(tmp_path):
     )
 
     result = generate_reports(str(tmp_path), template_dir="templates")
+    context = build_report_context(str(tmp_path))
 
     markdown_path = tmp_path / "reports" / "report.md"
     html_path = tmp_path / "reports" / "report.html"
+    pdf_path = tmp_path / "reports" / "report.pdf"
     metadata = json.loads((tmp_path / "scan_metadata.json").read_text(encoding="utf-8"))
     assert result["finding_count"] == 1
+    assert context["portfolio_summary"]["headline"].startswith(
+        "AutoPenKit consolidated 1 final finding"
+    )
+    assert context["portfolio_summary"]["validation_priorities"][0].startswith(
+        "FIND-001 (LOW): Public Swagger API"
+    )
     assert result["report_paths"]["markdown"] == str(markdown_path)
     assert result["report_paths"]["html"] == str(html_path)
+    assert result["report_paths"]["pdf"] == str(pdf_path)
     assert metadata["report_paths"] == result["report_paths"]
     assert metadata["report_generated_at"]
     assert markdown_path.exists()
     assert html_path.exists()
+    assert pdf_path.exists()
+    assert pdf_path.read_bytes().startswith(b"%PDF")
     assert "Public Swagger API" in markdown_path.read_text(encoding="utf-8")
     markdown = markdown_path.read_text(encoding="utf-8")
     html = html_path.read_text(encoding="utf-8")
     assert "How to Access and Verify" in markdown
     assert "AI Executive Action Plan" in markdown
+    assert "Key Observations" in markdown
+    assert "Remediation Themes" in markdown
+    assert "Validation Priorities" in markdown
     assert "Evidence quality" in markdown
     assert "Safe Follow-Up Scan Recommendations" in markdown
     assert "Open the Swagger UI URL" in markdown
@@ -179,3 +193,6 @@ def test_generate_reports_writes_markdown_and_html(tmp_path):
     assert "finding-toggle" in html
     assert "How to Access and Verify" in html
     assert "AI Executive Action Plan" in html
+    assert "Key Observations" in html
+    assert "Remediation Themes" in html
+    assert "Validation Priorities" in html

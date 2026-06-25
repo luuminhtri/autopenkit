@@ -681,7 +681,7 @@
         <div class="panel-header">
           <div>
             <h2 id="summary-title">Executive Summary</h2>
-            <p>Findings were collected from scanner output, normalized into a consistent schema, enriched with AI-assisted analysis when available, and consolidated into final findings for review.</p>
+            <p>{{ portfolio_summary.headline }}</p>
           </div>
         </div>
         <div class="summary-grid">
@@ -689,6 +689,30 @@
           <div class="metric-card"><span class="label">Normalized Findings</span><strong>{{ metadata.total_normalized_findings | default("N/A", true) }}</strong></div>
           <div class="metric-card"><span class="label">Final Findings</span><strong>{{ finding_count }}</strong></div>
           <div class="metric-card"><span class="label">Overall Risk</span><strong>{{ risk_level }}</strong></div>
+        </div>
+        <div class="callout">
+          <strong>Key Observations</strong>
+          <ul>
+            {% for observation in portfolio_summary.key_observations %}
+            <li>{{ observation }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        <div class="callout">
+          <strong>Remediation Themes</strong>
+          <ul>
+            {% for theme in portfolio_summary.remediation_themes %}
+            <li>{{ theme }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        <div class="callout">
+          <strong>Validation Priorities</strong>
+          <ul>
+            {% for priority in portfolio_summary.validation_priorities %}
+            <li>{{ priority }}</li>
+            {% endfor %}
+          </ul>
         </div>
       </section>
 

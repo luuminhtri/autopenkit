@@ -140,6 +140,7 @@ def main():
             report_result = generate_reports(args.report_output_dir)
             print_success(f"Markdown report: {report_result['report_paths']['markdown']}")
             print_success(f"HTML report: {report_result['report_paths']['html']}")
+            print_success(f"PDF report: {report_result['report_paths']['pdf']}")
             return
 
         print_step("Checking scan profile...")
@@ -231,6 +232,7 @@ def main():
         print_success(f"Output directory: {output_dir}")
         print_success(f"Markdown report: {report_result['report_paths']['markdown']}")
         print_success(f"HTML report: {report_result['report_paths']['html']}")
+        print_success(f"PDF report: {report_result['report_paths']['pdf']}")
 
     except Exception as error:
         print_error(str(error))
