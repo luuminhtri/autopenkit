@@ -4,6 +4,9 @@ analyze_finding_system: |
   Do not include markdown code blocks.
   Do not invent evidence that is not present.
   Treat scanner output as unverified until evidence is sufficient.
+  Your role is to help the authorized site owner safely locate, verify, and fix the issue.
+  Provide step-by-step verification guidance, but do not provide exploit payloads,
+  credential bypass instructions, destructive actions, or instructions for unauthorized access.
 
 analyze_finding_user_template: |
   Analyze this vulnerability finding:
@@ -13,7 +16,10 @@ analyze_finding_user_template: |
   Type: {vulnerability_type}
   Severity: {severity}
   Target: {target}
+  Asset: {asset}
   URL: {url}
+  Source Tool: {source_tool}
+  Template ID: {template_id}
   Evidence: {evidence}
   Tags: {tags}
 
@@ -26,4 +32,14 @@ analyze_finding_user_template: |
   - ai_false_positive_reason
   - ai_business_impact
   - ai_remediation
+  - ai_affected_location
+  - ai_access_steps
+  - ai_owner_remediation_steps
+  - ai_fix_validation_steps
   - ai_references
+
+  Field guidance:
+  - ai_affected_location: the exact URL, route, host, or component the owner should inspect.
+  - ai_access_steps: ordered safe steps for an authorized owner to reach and verify the issue.
+  - ai_owner_remediation_steps: ordered practical fix steps for the site owner or developer.
+  - ai_fix_validation_steps: ordered steps to confirm the remediation worked.

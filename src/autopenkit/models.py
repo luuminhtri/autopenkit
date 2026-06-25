@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ValidatedTarget(BaseModel):
@@ -55,11 +55,50 @@ class AIAnalysis(BaseModel):
     ai_false_positive_reason: Optional[str] = None
     ai_business_impact: str
     ai_remediation: str
+    ai_affected_location: Optional[str] = None
+    ai_access_steps: List[str] = Field(default_factory=list)
+    ai_owner_remediation_steps: List[str] = Field(default_factory=list)
+    ai_fix_validation_steps: List[str] = Field(default_factory=list)
     ai_references: List[str]
     analyzed_at: datetime
     model_used: str
     provider: str
     status: str = "analyzed"
+
+
+class FinalFinding(BaseModel):
+    finding_id: str
+    target: str
+    asset: str
+    vulnerability_name: str
+    vulnerability_type: str
+    severity: str
+    severity_score: int
+    final_severity: str
+    final_severity_score: int
+    source_tool: str
+    template_id: str
+    evidence: str
+    url: str
+    tags: List[str]
+    timestamp: Optional[str] = None
+    is_duplicate: bool = False
+    ai_vulnerability_title: Optional[str] = None
+    ai_severity: Optional[str] = None
+    ai_confidence: Optional[str] = None
+    ai_explanation: Optional[str] = None
+    ai_likely_false_positive: Optional[bool] = None
+    ai_false_positive_reason: Optional[str] = None
+    ai_business_impact: Optional[str] = None
+    ai_remediation: Optional[str] = None
+    ai_affected_location: Optional[str] = None
+    ai_access_steps: List[str] = Field(default_factory=list)
+    ai_owner_remediation_steps: List[str] = Field(default_factory=list)
+    ai_fix_validation_steps: List[str] = Field(default_factory=list)
+    ai_references: List[str] = Field(default_factory=list)
+    ai_status: str = "missing"
+    model_used: Optional[str] = None
+    provider: Optional[str] = None
 
 
 class ScanMetadata(BaseModel):
@@ -78,13 +117,15 @@ class ScanMetadata(BaseModel):
     total_normalized_findings: int = 0
     total_ai_analyzed_findings: int = 0
     total_final_findings: int = 0
-    findings_by_severity: dict = {
-        "critical": 0,
-        "high": 0,
-        "medium": 0,
-        "low": 0,
-        "info": 0,
-    }
+    findings_by_severity: dict = Field(
+        default_factory=lambda: {
+            "critical": 0,
+            "high": 0,
+            "medium": 0,
+            "low": 0,
+            "info": 0,
+        }
+    )
     scan_status: str = "completed"
     scan_warning: Optional[str] = None
     ai_enabled: bool

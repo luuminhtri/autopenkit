@@ -29,6 +29,19 @@ AI_ANALYSIS_ITEM_SCHEMA = {
         "ai_false_positive_reason": {"type": "STRING", "nullable": True},
         "ai_business_impact": {"type": "STRING"},
         "ai_remediation": {"type": "STRING"},
+        "ai_affected_location": {"type": "STRING"},
+        "ai_access_steps": {
+            "type": "ARRAY",
+            "items": {"type": "STRING"},
+        },
+        "ai_owner_remediation_steps": {
+            "type": "ARRAY",
+            "items": {"type": "STRING"},
+        },
+        "ai_fix_validation_steps": {
+            "type": "ARRAY",
+            "items": {"type": "STRING"},
+        },
         "ai_references": {
             "type": "ARRAY",
             "items": {"type": "STRING"},
@@ -43,6 +56,10 @@ AI_ANALYSIS_ITEM_SCHEMA = {
         "ai_likely_false_positive",
         "ai_business_impact",
         "ai_remediation",
+        "ai_affected_location",
+        "ai_access_steps",
+        "ai_owner_remediation_steps",
+        "ai_fix_validation_steps",
         "ai_references",
     ],
 }
@@ -100,6 +117,20 @@ def _analysis_placeholder(
         ai_false_positive_reason=reason,
         ai_business_impact="Manual review required.",
         ai_remediation="Validate the finding and apply remediation guidance from the source tool.",
+        ai_affected_location=finding.url,
+        ai_access_steps=[
+            "Open the affected URL or service from an authorized testing environment.",
+            "Compare the page or HTTP response with the scanner evidence.",
+            "Confirm whether the behavior is expected for this site before remediation.",
+        ],
+        ai_owner_remediation_steps=[
+            "Review the affected component owner and intended exposure.",
+            "Apply the relevant configuration or code fix after manual validation.",
+        ],
+        ai_fix_validation_steps=[
+            "Recheck the same affected location after the fix.",
+            "Confirm the original scanner evidence is no longer present.",
+        ],
         ai_references=[],
         analyzed_at=datetime.now(timezone.utc),
         model_used=model,
@@ -117,7 +148,10 @@ def _build_prompt(finding: NormalizedFinding, prompts: Dict[str, Any]) -> str:
         vulnerability_type=finding.vulnerability_type,
         severity=finding.severity,
         target=finding.target,
+        asset=finding.asset,
         url=finding.url,
+        source_tool=finding.source_tool,
+        template_id=finding.template_id,
         evidence=finding.evidence,
         tags=", ".join(finding.tags),
     )
@@ -135,7 +169,10 @@ def _finding_prompt_payload(finding: NormalizedFinding) -> Dict[str, Any]:
         "vulnerability_type": finding.vulnerability_type,
         "severity": finding.severity,
         "target": finding.target,
+        "asset": finding.asset,
         "url": finding.url,
+        "source_tool": finding.source_tool,
+        "template_id": finding.template_id,
         "evidence": finding.evidence,
         "tags": finding.tags,
     }
@@ -161,7 +198,11 @@ def _build_batch_prompt(
         "preserve every finding_id exactly, and include these fields for each item: "
         "finding_id, ai_vulnerability_title, ai_severity, ai_confidence, "
         "ai_explanation, ai_likely_false_positive, ai_false_positive_reason, "
-        "ai_business_impact, ai_remediation, ai_references. "
+        "ai_business_impact, ai_remediation, ai_affected_location, "
+        "ai_access_steps, ai_owner_remediation_steps, ai_fix_validation_steps, "
+        "ai_references. "
+        "The access steps must help an authorized site owner locate and safely "
+        "verify the issue without destructive actions, credential bypass, or exploit payloads. "
         "Do not include markdown."
     )
 
@@ -315,6 +356,14 @@ def _analysis_from_payload(
     provider: str,
     model: str,
 ) -> AIAnalysis:
+    def string_list(field_name: str) -> List[str]:
+        value = analysis.get(field_name)
+        if isinstance(value, list):
+            return [str(item) for item in value if str(item).strip()]
+        if isinstance(value, str) and value.strip():
+            return [value.strip()]
+        return []
+
     return AIAnalysis(
         finding_id=finding.finding_id,
         ai_vulnerability_title=str(
@@ -329,9 +378,11 @@ def _analysis_from_payload(
         ai_false_positive_reason=analysis.get("ai_false_positive_reason"),
         ai_business_impact=str(analysis.get("ai_business_impact") or ""),
         ai_remediation=str(analysis.get("ai_remediation") or ""),
-        ai_references=[
-            str(reference) for reference in analysis.get("ai_references", [])
-        ],
+        ai_affected_location=str(analysis.get("ai_affected_location") or finding.url),
+        ai_access_steps=string_list("ai_access_steps"),
+        ai_owner_remediation_steps=string_list("ai_owner_remediation_steps"),
+        ai_fix_validation_steps=string_list("ai_fix_validation_steps"),
+        ai_references=string_list("ai_references"),
         analyzed_at=datetime.now(timezone.utc),
         model_used=str(analysis.get("_model_used") or model),
         provider=str(provider),

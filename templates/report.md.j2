@@ -1,0 +1,142 @@
+# {{ metadata.project_name | default("AutoPenKit", true) }} Security Assessment Report
+
+**Target:** `{{ metadata.target | default("unknown", true) }}`  
+**Profile:** `{{ metadata.profile | default("unknown", true) }}`  
+**Scan status:** `{{ metadata.scan_status | default("unknown", true) }}`  
+**Overall risk:** **{{ risk_level }}**  
+**Generated at:** `{{ generated_at }}`
+
+---
+
+## 1. Executive Summary
+
+This report summarizes the automated security assessment results for `{{ metadata.target | default("the target", true) }}`. Findings were collected from scanner output, normalized into a consistent schema, enriched with AI-assisted analysis when available, and consolidated into final findings for review.
+
+| Metric | Value |
+|---|---:|
+| Live assets | {{ metadata.total_assets | default(assets.live_urls | default([]) | length, true) }} |
+| Raw scanner findings | {{ metadata.total_raw_findings | default("N/A", true) }} |
+| Normalized findings | {{ metadata.total_normalized_findings | default("N/A", true) }} |
+| Final findings | {{ finding_count }} |
+| AI-analyzed findings | {{ metadata.total_ai_analyzed_findings | default(ai_analyzed_count, true) }} |
+
+## 2. Severity Breakdown
+
+| Severity | Count |
+|---|---:|
+| Critical | {{ findings_by_severity.critical }} |
+| High | {{ findings_by_severity.high }} |
+| Medium | {{ findings_by_severity.medium }} |
+| Low | {{ findings_by_severity.low }} |
+| Info | {{ findings_by_severity.info }} |
+
+## 3. Scope
+
+{% set live_urls = assets.live_urls | default([], true) -%}
+{% if live_urls %}
+| Asset |
+|---|
+{% for url in live_urls -%}
+| `{{ url }}` |
+{% endfor %}
+{% else %}
+No live URLs were recorded for this scan.
+{% endif %}
+
+## 4. Finding Overview
+
+{% if findings %}
+| ID | Severity | Confidence | Title | URL |
+|---|---|---|---|---|
+{% for finding in findings -%}
+| {{ finding.finding_id }} | {{ finding.final_severity | upper }} | {{ finding.ai_confidence or "unknown" }} | {{ finding.ai_vulnerability_title or finding.vulnerability_name }} | `{{ finding.url }}` |
+{% endfor %}
+{% else %}
+No findings were produced.
+{% endif %}
+
+## 5. Detailed Findings
+
+{% for finding in findings %}
+### {{ finding.finding_id }} - {{ finding.ai_vulnerability_title or finding.vulnerability_name }}
+
+| Field | Value |
+|---|---|
+| Final severity | **{{ finding.final_severity | upper }}** |
+| Scanner severity | {{ finding.severity | upper }} |
+| AI confidence | {{ finding.ai_confidence or "unknown" }} |
+| AI status | {{ finding.ai_status }} |
+| Affected location | `{{ finding.ai_affected_location or finding.url }}` |
+| Source | {{ finding.source_tool }} / `{{ finding.template_id }}` |
+| Tags | {{ finding.tags | join(", ") if finding.tags else "N/A" }} |
+
+**Evidence**
+
+```text
+{{ finding.evidence }}
+```
+
+**How to Access and Verify**
+
+{% if finding.ai_access_steps %}
+{% for step in finding.ai_access_steps -%}
+{{ loop.index }}. {{ step }}
+{% endfor %}
+{% else %}
+1. Open the affected location from an authorized testing environment.
+2. Compare the observed page or HTTP response with the scanner evidence.
+3. Confirm whether the behavior is expected for this website.
+{% endif %}
+
+**Analysis**
+
+{{ finding.ai_explanation or "No AI explanation was available. Manual validation is recommended." }}
+
+**Business Impact**
+
+{{ finding.ai_business_impact or "Manual review required." }}
+
+**Recommended Remediation**
+
+{{ finding.ai_remediation or "Validate the finding and follow the source tool guidance." }}
+
+{% if finding.ai_owner_remediation_steps %}
+**Owner Remediation Steps**
+
+{% for step in finding.ai_owner_remediation_steps -%}
+{{ loop.index }}. {{ step }}
+{% endfor %}
+{% endif %}
+
+{% if finding.ai_fix_validation_steps %}
+**How to Confirm Fixed**
+
+{% for step in finding.ai_fix_validation_steps -%}
+{{ loop.index }}. {{ step }}
+{% endfor %}
+{% endif %}
+
+{% if finding.ai_likely_false_positive %}
+**False Positive Note**
+
+{{ finding.ai_false_positive_reason or "AI marked this finding as a likely false positive." }}
+{% endif %}
+
+{% if finding.ai_references %}
+**References**
+
+{% for reference in finding.ai_references -%}
+- {{ reference }}
+{% endfor %}
+{% endif %}
+
+---
+
+{% else %}
+No detailed findings are available.
+{% endfor %}
+
+## 6. Notes
+
+- AI-assisted analysis is intended to support triage and should be manually validated before remediation decisions.
+- Severity may be adjusted during final review when business context or exploitability differs from scanner output.

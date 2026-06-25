@@ -130,6 +130,17 @@ def test_analyze_scan_output_writes_ai_analysis_json(monkeypatch, tmp_path):
             "ai_false_positive_reason": None,
             "ai_business_impact": "May expose API documentation.",
             "ai_remediation": "Restrict access if it is not intended to be public.",
+            "ai_affected_location": "https://demo.testfire.net:443/swagger/index.html",
+            "ai_access_steps": [
+                "Open the Swagger UI URL from an authorized browser session.",
+                "Confirm whether the API documentation is intended to be public.",
+            ],
+            "ai_owner_remediation_steps": [
+                "Restrict Swagger UI to authenticated users or internal networks.",
+            ],
+            "ai_fix_validation_steps": [
+                "Reopen the URL and confirm the documentation is no longer public.",
+            ],
             "ai_references": ["https://swagger.io/"],
             "_model_used": "gemini-2.5-flash-lite",
         }
@@ -148,6 +159,7 @@ def test_analyze_scan_output_writes_ai_analysis_json(monkeypatch, tmp_path):
     saved = json.loads((tmp_path / "ai_analysis.json").read_text(encoding="utf-8"))
     assert saved[0]["finding_id"] == "FIND-001"
     assert saved[0]["ai_confidence"] == "medium"
+    assert saved[0]["ai_access_steps"][0].startswith("Open the Swagger UI")
     assert saved[0]["provider"] == "gemini"
 
 
@@ -170,6 +182,10 @@ def test_analyze_findings_batches_multiple_findings(monkeypatch):
                     "ai_false_positive_reason": None,
                     "ai_business_impact": "May expose API documentation.",
                     "ai_remediation": "Restrict access if it is not intended to be public.",
+                    "ai_affected_location": "https://demo.testfire.net:443/swagger/index.html",
+                    "ai_access_steps": ["Open the affected Swagger URL."],
+                    "ai_owner_remediation_steps": ["Restrict public access."],
+                    "ai_fix_validation_steps": ["Confirm the URL is protected."],
                     "ai_references": ["https://swagger.io/"],
                 },
                 {
@@ -182,6 +198,10 @@ def test_analyze_findings_batches_multiple_findings(monkeypatch):
                     "ai_false_positive_reason": None,
                     "ai_business_impact": "May reduce browser-side protections.",
                     "ai_remediation": "Configure standard HTTP security headers.",
+                    "ai_affected_location": "https://demo.testfire.net:443",
+                    "ai_access_steps": ["Inspect the HTTP response headers."],
+                    "ai_owner_remediation_steps": ["Configure missing headers."],
+                    "ai_fix_validation_steps": ["Confirm headers are present."],
                     "ai_references": ["https://developer.mozilla.org/"],
                 },
             ],
@@ -249,6 +269,10 @@ def test_analyze_findings_uses_fallback_model_after_retryable_error(monkeypatch)
             "ai_false_positive_reason": None,
             "ai_business_impact": "May expose API documentation.",
             "ai_remediation": "Restrict access if it is not intended to be public.",
+            "ai_affected_location": "https://demo.testfire.net:443/swagger/index.html",
+            "ai_access_steps": ["Open the affected Swagger URL."],
+            "ai_owner_remediation_steps": ["Restrict public access."],
+            "ai_fix_validation_steps": ["Confirm the URL is protected."],
             "ai_references": ["https://swagger.io/"],
             "_model_used": model,
         }

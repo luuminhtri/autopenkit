@@ -8,9 +8,11 @@ SRC_PATH = PROJECT_ROOT / "src"
 sys.path.insert(0, str(SRC_PATH))
 
 from autopenkit.ai_analysis import analyze_scan_output
+from autopenkit.merger import merge_scan_output
 from autopenkit.recon import build_initial_assets
 from autopenkit.models import ScanMetadata
 from autopenkit.normalizer import normalize_scan_output
+from autopenkit.reporter import generate_reports
 from autopenkit.scanner import run_nuclei_scan
 from autopenkit.utils import (
     create_scan_output_dir,
@@ -69,12 +71,25 @@ def parse_args():
         ),
     )
 
+    parser.add_argument(
+        "--report-output-dir",
+        help=(
+            "Merge existing normalized_findings.json and ai_analysis.json, then "
+            "generate Markdown and HTML reports without running Nuclei again."
+        ),
+    )
+
     args = parser.parse_args()
 
-    if not args.target and not args.normalize_output_dir and not args.analyze_output_dir:
+    if (
+        not args.target
+        and not args.normalize_output_dir
+        and not args.analyze_output_dir
+        and not args.report_output_dir
+    ):
         parser.error(
             "--target is required unless --normalize-output-dir or "
-            "--analyze-output-dir is provided"
+            "--analyze-output-dir or --report-output-dir is provided"
         )
 
     return args
@@ -113,6 +128,18 @@ def main():
             print_success(f"Analyzed findings: {ai_result['ai_analyzed_count']}")
             print_success(f"Skipped findings: {ai_result['ai_skipped_count']}")
             print_success(f"Output file: {ai_result['ai_output_path']}")
+            return
+
+        if args.report_output_dir:
+            print_step("Merging existing scan results...")
+            merge_result = merge_scan_output(args.report_output_dir)
+            print_success(f"Final findings: {merge_result['final_findings_count']}")
+            print_success(f"Output file: {merge_result['final_output_path']}")
+
+            print_step("Generating reports...")
+            report_result = generate_reports(args.report_output_dir)
+            print_success(f"Markdown report: {report_result['report_paths']['markdown']}")
+            print_success(f"HTML report: {report_result['report_paths']['html']}")
             return
 
         print_step("Checking scan profile...")
@@ -154,6 +181,9 @@ def main():
             skip_ai=not ai_should_run,
         )
 
+        print_step("Merging scan results...")
+        merge_result = merge_scan_output(output_dir)
+
         finished_at = datetime.now(timezone.utc)
         duration_seconds = (finished_at - started_at).total_seconds()
 
@@ -167,13 +197,22 @@ def main():
             started_at=started_at,
             finished_at=finished_at,
             duration_seconds=duration_seconds,
-            modules_run=["validator", "recon", "scanner", "normalizer", "ai_analysis"],
+            modules_run=[
+                "validator",
+                "recon",
+                "scanner",
+                "normalizer",
+                "ai_analysis",
+                "merger",
+                "reporter",
+            ],
             tools_used=[scan_result["tool"]],
             total_assets=len(assets.live_urls),
             total_raw_findings=scan_result["raw_findings_count"],
             total_normalized_findings=normalization_result["normalized_findings_count"],
             total_ai_analyzed_findings=ai_result["ai_analyzed_count"],
-            findings_by_severity=normalization_result["findings_by_severity"],
+            total_final_findings=merge_result["final_findings_count"],
+            findings_by_severity=merge_result["findings_by_severity"],
             scan_status=scan_result["status"],
             scan_warning=scan_result.get("warning"),
             ai_enabled=ai_should_run,
@@ -185,8 +224,13 @@ def main():
             str(Path(output_dir) / "scan_metadata.json"),
         )
 
-        print_success("Phase 4 AI analysis completed successfully.")
+        print_step("Generating reports...")
+        report_result = generate_reports(output_dir)
+
+        print_success("Phase 5 report generation completed successfully.")
         print_success(f"Output directory: {output_dir}")
+        print_success(f"Markdown report: {report_result['report_paths']['markdown']}")
+        print_success(f"HTML report: {report_result['report_paths']['html']}")
 
     except Exception as error:
         print_error(str(error))
