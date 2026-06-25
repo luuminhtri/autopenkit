@@ -27,8 +27,14 @@ AI_ANALYSIS_ITEM_SCHEMA = {
         "ai_explanation": {"type": "STRING"},
         "ai_likely_false_positive": {"type": "BOOLEAN"},
         "ai_false_positive_reason": {"type": "STRING", "nullable": True},
+        "ai_validation_status": {"type": "STRING"},
+        "ai_evidence_quality": {"type": "STRING"},
+        "ai_confidence_reason": {"type": "STRING"},
         "ai_business_impact": {"type": "STRING"},
         "ai_remediation": {"type": "STRING"},
+        "ai_priority_rationale": {"type": "STRING"},
+        "ai_remediation_owner": {"type": "STRING"},
+        "ai_technology_context": {"type": "STRING"},
         "ai_affected_location": {"type": "STRING"},
         "ai_access_steps": {
             "type": "ARRAY",
@@ -39,6 +45,14 @@ AI_ANALYSIS_ITEM_SCHEMA = {
             "items": {"type": "STRING"},
         },
         "ai_fix_validation_steps": {
+            "type": "ARRAY",
+            "items": {"type": "STRING"},
+        },
+        "ai_config_examples": {
+            "type": "ARRAY",
+            "items": {"type": "STRING"},
+        },
+        "ai_follow_up_scan_recommendations": {
             "type": "ARRAY",
             "items": {"type": "STRING"},
         },
@@ -54,12 +68,20 @@ AI_ANALYSIS_ITEM_SCHEMA = {
         "ai_confidence",
         "ai_explanation",
         "ai_likely_false_positive",
+        "ai_validation_status",
+        "ai_evidence_quality",
+        "ai_confidence_reason",
         "ai_business_impact",
         "ai_remediation",
+        "ai_priority_rationale",
+        "ai_remediation_owner",
+        "ai_technology_context",
         "ai_affected_location",
         "ai_access_steps",
         "ai_owner_remediation_steps",
         "ai_fix_validation_steps",
+        "ai_config_examples",
+        "ai_follow_up_scan_recommendations",
         "ai_references",
     ],
 }
@@ -115,8 +137,14 @@ def _analysis_placeholder(
         ),
         ai_likely_false_positive=False,
         ai_false_positive_reason=reason,
+        ai_validation_status="needs_manual_validation",
+        ai_evidence_quality="unknown",
+        ai_confidence_reason="AI analysis was skipped, so confidence cannot be assessed.",
         ai_business_impact="Manual review required.",
         ai_remediation="Validate the finding and apply remediation guidance from the source tool.",
+        ai_priority_rationale="Prioritize after a human reviewer confirms the scanner evidence.",
+        ai_remediation_owner="site owner",
+        ai_technology_context="unknown",
         ai_affected_location=finding.url,
         ai_access_steps=[
             "Open the affected URL or service from an authorized testing environment.",
@@ -131,6 +159,8 @@ def _analysis_placeholder(
             "Recheck the same affected location after the fix.",
             "Confirm the original scanner evidence is no longer present.",
         ],
+        ai_config_examples=[],
+        ai_follow_up_scan_recommendations=[],
         ai_references=[],
         analyzed_at=datetime.now(timezone.utc),
         model_used=model,
@@ -198,11 +228,15 @@ def _build_batch_prompt(
         "preserve every finding_id exactly, and include these fields for each item: "
         "finding_id, ai_vulnerability_title, ai_severity, ai_confidence, "
         "ai_explanation, ai_likely_false_positive, ai_false_positive_reason, "
-        "ai_business_impact, ai_remediation, ai_affected_location, "
+        "ai_validation_status, ai_evidence_quality, ai_confidence_reason, "
+        "ai_business_impact, ai_remediation, ai_priority_rationale, "
+        "ai_remediation_owner, ai_technology_context, ai_affected_location, "
         "ai_access_steps, ai_owner_remediation_steps, ai_fix_validation_steps, "
-        "ai_references. "
+        "ai_config_examples, ai_follow_up_scan_recommendations, ai_references. "
         "The access steps must help an authorized site owner locate and safely "
         "verify the issue without destructive actions, credential bypass, or exploit payloads. "
+        "The follow-up scan recommendations must suggest safe Nuclei tags, template families, "
+        "or manual verification focus areas for an authorized retest. "
         "Do not include markdown."
     )
 
@@ -376,12 +410,24 @@ def _analysis_from_payload(
             analysis.get("ai_likely_false_positive", False)
         ),
         ai_false_positive_reason=analysis.get("ai_false_positive_reason"),
+        ai_validation_status=str(
+            analysis.get("ai_validation_status") or "needs_manual_validation"
+        ),
+        ai_evidence_quality=str(analysis.get("ai_evidence_quality") or "unknown"),
+        ai_confidence_reason=str(analysis.get("ai_confidence_reason") or ""),
         ai_business_impact=str(analysis.get("ai_business_impact") or ""),
         ai_remediation=str(analysis.get("ai_remediation") or ""),
+        ai_priority_rationale=str(analysis.get("ai_priority_rationale") or ""),
+        ai_remediation_owner=str(analysis.get("ai_remediation_owner") or ""),
+        ai_technology_context=str(analysis.get("ai_technology_context") or ""),
         ai_affected_location=str(analysis.get("ai_affected_location") or finding.url),
         ai_access_steps=string_list("ai_access_steps"),
         ai_owner_remediation_steps=string_list("ai_owner_remediation_steps"),
         ai_fix_validation_steps=string_list("ai_fix_validation_steps"),
+        ai_config_examples=string_list("ai_config_examples"),
+        ai_follow_up_scan_recommendations=string_list(
+            "ai_follow_up_scan_recommendations"
+        ),
         ai_references=string_list("ai_references"),
         analyzed_at=datetime.now(timezone.utc),
         model_used=str(analysis.get("_model_used") or model),

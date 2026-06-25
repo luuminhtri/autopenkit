@@ -3,423 +3,1089 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ metadata.project_name | default("AutoPenKit", true) }} Security Assessment Report</title>
+  <title>{{ metadata.project_name | default("AutoPenKit", true) }} Security Assessment Dashboard</title>
   <style>
     :root {
-      --bg: #f4f6f8;
-      --panel: #ffffff;
-      --ink: #1d2733;
-      --muted: #5c6b7a;
-      --line: #d8dee5;
-      --line-soft: #edf1f5;
-      --accent: #0f766e;
-      --critical-bg: #fee2e2;
-      --critical-fg: #991b1b;
-      --high-bg: #ffedd5;
-      --high-fg: #9a3412;
-      --medium-bg: #fef3c7;
-      --medium-fg: #92400e;
-      --low-bg: #dcfce7;
-      --low-fg: #166534;
-      --info-bg: #dbeafe;
-      --info-fg: #1d4ed8;
+      color-scheme: dark;
+      --bg: #080b12;
+      --bg-elevated: #0d121d;
+      --panel: rgba(14, 20, 32, 0.92);
+      --panel-strong: #111827;
+      --panel-soft: #151d2c;
+      --ink: #e6edf7;
+      --muted: #94a3b8;
+      --muted-strong: #cbd5e1;
+      --line: rgba(148, 163, 184, 0.22);
+      --line-strong: rgba(148, 163, 184, 0.36);
+      --accent: #38bdf8;
+      --accent-strong: #22d3ee;
+      --focus: rgba(56, 189, 248, 0.28);
+      --shadow: 0 24px 70px rgba(0, 0, 0, 0.36);
+      --critical-bg: rgba(248, 113, 113, 0.14);
+      --critical-fg: #fca5a5;
+      --critical-line: #ef4444;
+      --high-bg: rgba(251, 146, 60, 0.14);
+      --high-fg: #fdba74;
+      --high-line: #f97316;
+      --medium-bg: rgba(250, 204, 21, 0.13);
+      --medium-fg: #fde68a;
+      --medium-line: #eab308;
+      --low-bg: rgba(74, 222, 128, 0.12);
+      --low-fg: #86efac;
+      --low-line: #22c55e;
+      --info-bg: rgba(96, 165, 250, 0.13);
+      --info-fg: #93c5fd;
+      --info-line: #3b82f6;
+      --radius: 8px;
     }
+
     * {
       box-sizing: border-box;
     }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
     body {
-      background: var(--bg);
+      background:
+        radial-gradient(circle at top left, rgba(56, 189, 248, 0.13), transparent 32rem),
+        radial-gradient(circle at top right, rgba(34, 197, 94, 0.08), transparent 28rem),
+        var(--bg);
       color: var(--ink);
-      font-family: Arial, Helvetica, sans-serif;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       line-height: 1.55;
       margin: 0;
+      min-height: 100vh;
     }
-    main {
+
+    a {
+      color: var(--accent-strong);
+    }
+
+    code, pre {
+      background: rgba(2, 6, 23, 0.72);
+      border: 1px solid var(--line);
+      color: #dbeafe;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+
+    code {
+      border-radius: 6px;
+      padding: 2px 6px;
+      word-break: break-word;
+    }
+
+    pre {
+      border-radius: var(--radius);
+      margin: 10px 0 18px;
+      overflow-x: auto;
+      padding: 14px;
+      white-space: pre-wrap;
+    }
+
+    .page-header {
+      border-bottom: 1px solid var(--line);
+      padding: 28px clamp(18px, 4vw, 44px);
+    }
+
+    .header-grid {
+      display: grid;
+      gap: 24px;
+      grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.75fr);
       margin: 0 auto;
-      max-width: 1120px;
-      padding: 32px 20px 48px;
+      max-width: 1500px;
     }
-    .cover {
-      background: var(--panel);
-      border-top: 6px solid var(--accent);
-      box-shadow: 0 10px 28px rgba(16, 24, 40, 0.08);
-      margin-bottom: 20px;
-      padding: 34px;
-    }
+
     .eyebrow {
-      color: var(--accent);
+      color: var(--accent-strong);
       font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 0.08em;
+      font-weight: 800;
+      letter-spacing: 0.11em;
       margin: 0 0 8px;
       text-transform: uppercase;
     }
+
     h1, h2, h3 {
-      line-height: 1.2;
+      line-height: 1.16;
       margin: 0;
     }
+
     h1 {
-      font-size: 34px;
-      margin-bottom: 14px;
+      font-size: clamp(30px, 5vw, 56px);
+      letter-spacing: -0.035em;
+      max-width: 920px;
     }
+
     h2 {
-      border-bottom: 1px solid var(--line);
-      font-size: 20px;
-      margin-bottom: 16px;
-      padding-bottom: 10px;
+      font-size: 19px;
+      letter-spacing: -0.01em;
     }
+
     h3 {
-      font-size: 18px;
-      margin-bottom: 12px;
+      font-size: 16px;
     }
+
     p {
       margin: 0 0 12px;
     }
+
     .subtitle {
       color: var(--muted);
+      font-size: 16px;
+      margin-top: 14px;
       max-width: 760px;
     }
-    .report-meta {
+
+    .meta-grid {
       display: grid;
-      gap: 12px;
-      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-      margin-top: 26px;
+      gap: 10px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
-    .meta-item, .metric, section {
+
+    .meta-card, .metric-card, .panel, .finding-card {
       background: var(--panel);
       border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: 0 18px 60px rgba(0, 0, 0, 0.18);
     }
-    .meta-item, .metric {
+
+    .meta-card {
+      min-width: 0;
       padding: 14px;
     }
+
     .label {
       color: var(--muted);
       display: block;
-      font-size: 12px;
-      font-weight: 700;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
     }
+
     .value {
+      color: var(--muted-strong);
       display: block;
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 700;
+      margin-top: 5px;
       overflow-wrap: anywhere;
     }
-    section {
-      margin-bottom: 20px;
-      padding: 24px;
+
+    .dashboard-shell {
+      display: grid;
+      gap: 22px;
+      grid-template-columns: 290px minmax(0, 1fr);
+      margin: 0 auto;
+      max-width: 1500px;
+      padding: 24px clamp(18px, 4vw, 44px) 52px;
     }
-    .summary-grid {
+
+    .metrics-rail {
+      align-self: start;
       display: grid;
       gap: 12px;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      position: sticky;
+      top: 18px;
     }
-    .metric strong {
+
+    .metric-card {
+      padding: 16px;
+    }
+
+    .metric-card strong {
       display: block;
-      font-size: 26px;
+      font-size: 30px;
+      letter-spacing: -0.03em;
       margin-top: 4px;
     }
+
+    .metric-card small {
+      color: var(--muted);
+      display: block;
+      margin-top: 4px;
+    }
+
+    .workspace {
+      display: grid;
+      gap: 16px;
+      min-width: 0;
+    }
+
+    .panel {
+      padding: 20px;
+    }
+
+    .panel-header {
+      align-items: start;
+      display: flex;
+      gap: 16px;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .panel-header p {
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
     table {
       border-collapse: collapse;
       font-size: 14px;
+      min-width: 760px;
       width: 100%;
     }
+
     th, td {
-      border-bottom: 1px solid var(--line-soft);
-      padding: 10px 8px;
+      border-bottom: 1px solid var(--line);
+      padding: 12px 10px;
       text-align: left;
       vertical-align: top;
     }
+
     th {
-      background: #f8fafc;
-      color: #334155;
-      font-size: 12px;
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
     }
-    code, pre {
-      background: #f8fafc;
-      border: 1px solid var(--line-soft);
-      color: #243447;
-      font-family: Consolas, Menlo, Monaco, monospace;
+
+    .summary-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     }
-    code {
-      border-radius: 4px;
-      padding: 2px 5px;
+
+    .callout {
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.22);
+      border-left: 3px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 14px;
     }
-    pre {
-      border-radius: 6px;
-      margin: 8px 0 16px;
-      overflow-x: auto;
-      padding: 12px;
-      white-space: pre-wrap;
-    }
+
     .badge {
+      align-items: center;
+      border: 1px solid currentColor;
+      border-left-width: 4px;
       border-radius: 999px;
-      display: inline-block;
-      font-size: 12px;
-      font-weight: 700;
+      display: inline-flex;
+      font-size: 11px;
+      font-weight: 900;
+      gap: 6px;
       line-height: 1;
       padding: 6px 9px;
       text-transform: uppercase;
+      white-space: nowrap;
     }
-    .badge.critical { background: var(--critical-bg); color: var(--critical-fg); }
-    .badge.high { background: var(--high-bg); color: var(--high-fg); }
-    .badge.medium { background: var(--medium-bg); color: var(--medium-fg); }
-    .badge.low { background: var(--low-bg); color: var(--low-fg); }
-    .badge.info { background: var(--info-bg); color: var(--info-fg); }
-    .finding {
-      border: 1px solid var(--line);
-      margin-top: 16px;
+
+    .badge.critical { background: var(--critical-bg); color: var(--critical-fg); border-color: var(--critical-line); }
+    .badge.high { background: var(--high-bg); color: var(--high-fg); border-color: var(--high-line); }
+    .badge.medium { background: var(--medium-bg); color: var(--medium-fg); border-color: var(--medium-line); }
+    .badge.low { background: var(--low-bg); color: var(--low-fg); border-color: var(--low-line); }
+    .badge.info { background: var(--info-bg); color: var(--info-fg); border-color: var(--info-line); }
+
+    .filter-panel {
+      backdrop-filter: blur(18px);
+      background: rgba(8, 11, 18, 0.88);
+      position: sticky;
+      top: 0;
+      z-index: 20;
     }
-    .finding-header {
-      align-items: flex-start;
-      background: #f8fafc;
-      border-bottom: 1px solid var(--line);
-      display: flex;
+
+    .filter-grid {
+      display: grid;
       gap: 14px;
+      grid-template-columns: minmax(240px, 1fr) auto;
+    }
+
+    .search-box {
+      position: relative;
+    }
+
+    .search-box input {
+      background: rgba(2, 6, 23, 0.68);
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      color: var(--ink);
+      font: inherit;
+      outline: none;
+      padding: 13px 14px 13px 42px;
+      width: 100%;
+    }
+
+    .search-box input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px var(--focus);
+    }
+
+    .search-box span {
+      color: var(--muted);
+      left: 14px;
+      position: absolute;
+      top: 12px;
+    }
+
+    .filter-actions {
+      align-items: center;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .filter-button, .utility-button {
+      background: rgba(15, 23, 42, 0.86);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted-strong);
+      cursor: pointer;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 800;
+      padding: 9px 12px;
+      transition: border-color 160ms ease, color 160ms ease, background 160ms ease, transform 160ms ease;
+    }
+
+    .filter-button:hover, .utility-button:hover,
+    .filter-button.is-active {
+      background: rgba(56, 189, 248, 0.12);
+      border-color: rgba(56, 189, 248, 0.62);
+      color: var(--ink);
+    }
+
+    .filter-button:active, .utility-button:active {
+      transform: translateY(1px);
+    }
+
+    .count-pill {
+      background: rgba(148, 163, 184, 0.18);
+      border-radius: 999px;
+      color: var(--muted-strong);
+      display: inline-block;
+      font-size: 11px;
+      margin-left: 6px;
+      min-width: 24px;
+      padding: 3px 7px;
+      text-align: center;
+    }
+
+    .findings-toolbar {
+      align-items: center;
+      display: flex;
+      gap: 12px;
       justify-content: space-between;
-      padding: 16px;
+      margin-bottom: 14px;
     }
-    .finding-body {
-      padding: 16px;
+
+    .result-count {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
     }
+
+    .utility-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .finding-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .finding-card {
+      overflow: hidden;
+    }
+
+    .finding-card.is-hidden {
+      display: none;
+    }
+
+    .finding-toggle {
+      align-items: center;
+      background: transparent;
+      border: 0;
+      color: inherit;
+      cursor: pointer;
+      display: grid;
+      gap: 14px;
+      grid-template-columns: 96px minmax(220px, 1fr) 118px minmax(150px, 0.75fr) minmax(220px, 1fr) 28px;
+      padding: 15px 16px;
+      text-align: left;
+      width: 100%;
+    }
+
+    .finding-toggle:hover {
+      background: rgba(148, 163, 184, 0.07);
+    }
+
+    .finding-id {
+      color: var(--accent-strong);
+      font-weight: 900;
+    }
+
     .finding-title {
-      margin: 0;
+      font-weight: 850;
+      min-width: 0;
     }
-    .two-column {
+
+    .finding-title span,
+    .finding-target,
+    .finding-component {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .finding-component, .finding-target {
+      color: var(--muted);
+      font-size: 13px;
+      min-width: 0;
+    }
+
+    .chevron {
+      color: var(--muted);
+      display: inline-block;
+      font-size: 18px;
+      transform: rotate(0deg);
+      transition: transform 180ms ease;
+    }
+
+    .finding-card.is-open .chevron {
+      transform: rotate(90deg);
+    }
+
+    .finding-panel {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 240ms ease;
+    }
+
+    .finding-content {
+      border-top: 1px solid var(--line);
+      padding: 18px;
+    }
+
+    .detail-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      margin-bottom: 18px;
+    }
+
+    .detail-card {
+      background: rgba(2, 6, 23, 0.34);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px;
+    }
+
+    .content-grid {
       display: grid;
       gap: 16px;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 0.55fr);
     }
-    .callout {
-      background: #f8fafc;
-      border-left: 4px solid var(--accent);
-      padding: 12px 14px;
+
+    .stack {
+      display: grid;
+      gap: 14px;
     }
-    a {
-      color: #0f5f9c;
+
+    .content-block {
+      background: rgba(15, 23, 42, 0.55);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
     }
+
+    .content-block h4 {
+      color: var(--muted-strong);
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      margin: 0 0 10px;
+      text-transform: uppercase;
+    }
+
+    .content-block p:last-child,
+    .content-block ol:last-child,
+    .content-block ul:last-child,
+    .content-block pre:last-child {
+      margin-bottom: 0;
+    }
+
+    .empty-state {
+      border: 1px dashed var(--line-strong);
+      border-radius: var(--radius);
+      color: var(--muted);
+      display: none;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .empty-state.is-visible {
+      display: block;
+    }
+
+    @media (max-width: 1100px) {
+      .header-grid, .dashboard-shell {
+        grid-template-columns: 1fr;
+      }
+
+      .metrics-rail {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        position: static;
+      }
+
+      .finding-toggle {
+        grid-template-columns: 86px minmax(180px, 1fr) 112px 24px;
+      }
+
+      .finding-component, .finding-target {
+        display: none;
+      }
+
+      .content-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .page-header, .dashboard-shell {
+        padding-left: 14px;
+        padding-right: 14px;
+      }
+
+      .meta-grid, .metrics-rail, .filter-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .filter-actions {
+        justify-content: flex-start;
+      }
+
+      .finding-toggle {
+        grid-template-columns: 1fr auto;
+      }
+
+      .finding-id, .finding-title, .finding-toggle .badge {
+        grid-column: 1 / 2;
+      }
+
+      .chevron {
+        grid-column: 2 / 3;
+        grid-row: 1 / 2;
+      }
+    }
+
     @media print {
       body {
         background: #ffffff;
+        color: #111827;
       }
-      main {
+
+      .page-header, .dashboard-shell {
         max-width: none;
         padding: 0;
       }
-      .cover, section {
+
+      .dashboard-shell {
+        display: block;
+      }
+
+      .metrics-rail, .filter-panel, .utility-group {
+        display: none;
+      }
+
+      .panel, .finding-card {
+        background: #ffffff;
+        border-color: #d1d5db;
         box-shadow: none;
         break-inside: avoid;
       }
-      .finding {
-        break-inside: avoid;
+
+      .finding-panel {
+        max-height: none !important;
+        overflow: visible;
       }
-      a {
-        color: inherit;
-        text-decoration: none;
+
+      .finding-toggle {
+        cursor: default;
       }
     }
   </style>
 </head>
 <body>
-  <main>
-    <header class="cover">
-      <p class="eyebrow">Security Report</p>
-      <h1>{{ metadata.project_name | default("AutoPenKit", true) }}</h1>
-      <p class="subtitle">Automated scan results consolidated from normalized scanner findings and AI-assisted analysis.</p>
-      <div class="report-meta">
-        <div class="meta-item">
+  <header class="page-header">
+    <div class="header-grid">
+      <div>
+        <p class="eyebrow">Security Intelligence Dashboard</p>
+        <h1>{{ metadata.project_name | default("AutoPenKit", true) }}</h1>
+        <p class="subtitle">Interactive security report consolidated from normalized scanner evidence, AI triage, owner-focused remediation guidance, and safe retest recommendations.</p>
+      </div>
+      <div class="meta-grid" aria-label="Report metadata">
+        <div class="meta-card">
           <span class="label">Target</span>
           <span class="value"><code>{{ metadata.target | default("unknown", true) }}</code></span>
         </div>
-        <div class="meta-item">
+        <div class="meta-card">
           <span class="label">Profile</span>
           <span class="value">{{ metadata.profile | default("unknown", true) }}</span>
         </div>
-        <div class="meta-item">
+        <div class="meta-card">
           <span class="label">Status</span>
           <span class="value">{{ metadata.scan_status | default("unknown", true) }}</span>
         </div>
-        <div class="meta-item">
-          <span class="label">Overall Risk</span>
-          <span class="value">{{ risk_level }}</span>
-        </div>
-        <div class="meta-item">
-          <span class="label">Started</span>
-          <span class="value">{{ metadata.started_at | default("unknown", true) }}</span>
-        </div>
-        <div class="meta-item">
+        <div class="meta-card">
           <span class="label">Generated</span>
           <span class="value">{{ generated_at }}</span>
         </div>
       </div>
-    </header>
+    </div>
+  </header>
 
-    <section>
-      <h2>Executive Summary</h2>
-      <div class="summary-grid">
-        <div class="metric"><span class="label">Live Assets</span><strong>{{ metadata.total_assets | default(assets.live_urls | default([]) | length, true) }}</strong></div>
-        <div class="metric"><span class="label">Final Findings</span><strong>{{ finding_count }}</strong></div>
-        <div class="metric"><span class="label">AI Analyzed</span><strong>{{ metadata.total_ai_analyzed_findings | default(ai_analyzed_count, true) }}</strong></div>
-        <div class="metric"><span class="label">Risk Rating</span><strong>{{ risk_level }}</strong></div>
+  <main class="dashboard-shell">
+    <aside class="metrics-rail" aria-label="Executive metrics">
+      <div class="metric-card">
+        <span class="label">Live Assets</span>
+        <strong>{{ metadata.total_assets | default(assets.live_urls | default([]) | length, true) }}</strong>
+        <small>In authorized scan scope</small>
       </div>
-    </section>
+      <div class="metric-card">
+        <span class="label">Total Findings</span>
+        <strong>{{ finding_count }}</strong>
+        <small><span id="visibleFindings">{{ finding_count }}</span> currently visible</small>
+      </div>
+      <div class="metric-card">
+        <span class="label">AI Analyzed</span>
+        <strong>{{ metadata.total_ai_analyzed_findings | default(ai_analyzed_count, true) }}</strong>
+        <small>Findings enriched by AI</small>
+      </div>
+      <div class="metric-card">
+        <span class="label">Risk Rating</span>
+        <strong>{{ risk_level }}</strong>
+        <small>Based on final severity</small>
+      </div>
+    </aside>
 
-    <section>
-      <h2>Severity Breakdown</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Severity</th>
-            <th>Count</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for severity, count in findings_by_severity.items() %}
-          <tr>
-            <td><span class="badge {{ severity }}">{{ severity }}</span></td>
-            <td>{{ count }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </section>
-
-    <section>
-      <h2>Scope</h2>
-      {% if assets.live_urls %}
-      <table>
-        <thead>
-          <tr><th>Live URL</th></tr>
-        </thead>
-        <tbody>
-          {% for url in assets.live_urls %}
-          <tr><td><code>{{ url }}</code></td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% else %}
-      <p>No live URLs were recorded.</p>
-      {% endif %}
-    </section>
-
-    <section>
-      <h2>Finding Overview</h2>
-      {% if findings %}
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Severity</th>
-            <th>Confidence</th>
-            <th>Finding</th>
-            <th>URL</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for finding in findings %}
-          <tr>
-            <td>{{ finding.finding_id }}</td>
-            <td><span class="badge {{ finding.final_severity }}">{{ finding.final_severity }}</span></td>
-            <td>{{ finding.ai_confidence or "unknown" }}</td>
-            <td>{{ finding.ai_vulnerability_title or finding.vulnerability_name }}</td>
-            <td><code>{{ finding.url }}</code></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% else %}
-      <p>No findings were produced.</p>
-      {% endif %}
-    </section>
-
-    <section>
-      <h2>Detailed Findings</h2>
-      {% for finding in findings %}
-      <article class="finding">
-        <div class="finding-header">
+    <div class="workspace">
+      <section class="panel" aria-labelledby="summary-title">
+        <div class="panel-header">
           <div>
-            <h3 class="finding-title">{{ finding.finding_id }} - {{ finding.ai_vulnerability_title or finding.vulnerability_name }}</h3>
-            <p>{{ finding.source_tool }} / {{ finding.template_id }}</p>
+            <h2 id="summary-title">Executive Summary</h2>
+            <p>Findings were collected from scanner output, normalized into a consistent schema, enriched with AI-assisted analysis when available, and consolidated into final findings for review.</p>
           </div>
-          <span class="badge {{ finding.final_severity }}">{{ finding.final_severity }}</span>
         </div>
-        <div class="finding-body">
-          <div class="two-column">
-            <div>
-              <span class="label">Affected Location</span>
-              <p><code>{{ finding.ai_affected_location or finding.url }}</code></p>
-            </div>
-            <div>
-              <span class="label">AI Confidence</span>
-              <p>{{ finding.ai_confidence or "unknown" }} | {{ finding.ai_status }}</p>
-            </div>
+        <div class="summary-grid">
+          <div class="metric-card"><span class="label">Raw Scanner Findings</span><strong>{{ metadata.total_raw_findings | default("N/A", true) }}</strong></div>
+          <div class="metric-card"><span class="label">Normalized Findings</span><strong>{{ metadata.total_normalized_findings | default("N/A", true) }}</strong></div>
+          <div class="metric-card"><span class="label">Final Findings</span><strong>{{ finding_count }}</strong></div>
+          <div class="metric-card"><span class="label">Overall Risk</span><strong>{{ risk_level }}</strong></div>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="action-plan-title">
+        <div class="panel-header">
+          <div>
+            <h2 id="action-plan-title">AI Executive Action Plan</h2>
+            <p>AI-generated prioritization for owners, validation status, rationale, and next steps.</p>
           </div>
-          <span class="label">Evidence</span>
-          <pre>{{ finding.evidence }}</pre>
-          <div class="callout">
-            <strong>How to Access and Verify</strong>
-            {% if finding.ai_access_steps %}
-            <ol>
-              {% for step in finding.ai_access_steps %}
-              <li>{{ step }}</li>
+        </div>
+        {% if executive_action_plan %}
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Priority</th>
+                <th>Finding</th>
+                <th>Owner</th>
+                <th>Triage</th>
+                <th>Why</th>
+                <th>Next Step</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in executive_action_plan %}
+              <tr>
+                <td>{{ item.timeline }}</td>
+                <td>{{ item.finding_id }} - {{ item.title }}</td>
+                <td>{{ item.owner }}</td>
+                <td>{{ item.validation_status }}</td>
+                <td>{{ item.rationale }}</td>
+                <td>{{ item.next_step }}</td>
+              </tr>
               {% endfor %}
-            </ol>
-            {% else %}
-            <ol>
-              <li>Open the affected location from an authorized testing environment.</li>
-              <li>Compare the observed page or HTTP response with the scanner evidence.</li>
-              <li>Confirm whether the behavior is expected for this website.</li>
-            </ol>
-            {% endif %}
-          </div>
-          <div class="callout">
-            <strong>Analysis</strong>
-            <p>{{ finding.ai_explanation or "No AI explanation was available. Manual validation is recommended." }}</p>
-          </div>
-          <p><strong>Business Impact:</strong> {{ finding.ai_business_impact or "Manual review required." }}</p>
-          <p><strong>Recommended Remediation:</strong> {{ finding.ai_remediation or "Validate the finding and follow the source tool guidance." }}</p>
-          {% if finding.ai_owner_remediation_steps %}
-          <p><strong>Owner Remediation Steps</strong></p>
-          <ol>
-            {% for step in finding.ai_owner_remediation_steps %}
-            <li>{{ step }}</li>
-            {% endfor %}
-          </ol>
-          {% endif %}
-          {% if finding.ai_fix_validation_steps %}
-          <p><strong>How to Confirm Fixed</strong></p>
-          <ol>
-            {% for step in finding.ai_fix_validation_steps %}
-            <li>{{ step }}</li>
-            {% endfor %}
-          </ol>
-          {% endif %}
-          {% if finding.ai_likely_false_positive %}
-          <p><strong>False Positive Note:</strong> {{ finding.ai_false_positive_reason or "AI marked this finding as a likely false positive." }}</p>
-          {% endif %}
-          {% if finding.ai_references %}
-          <p><strong>References</strong></p>
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p>No AI action plan is available.</p>
+        {% endif %}
+
+        {% if follow_up_scan_recommendations %}
+        <div class="callout">
+          <strong>Safe Follow-Up Scan Focus</strong>
           <ul>
-            {% for reference in finding.ai_references %}
-            <li><a href="{{ reference }}">{{ reference }}</a></li>
+            {% for recommendation in follow_up_scan_recommendations %}
+            <li>{{ recommendation }}</li>
             {% endfor %}
           </ul>
-          {% endif %}
         </div>
-      </article>
-      {% else %}
-      <p>No detailed findings are available.</p>
-      {% endfor %}
-    </section>
+        {% endif %}
+      </section>
 
-    <section>
-      <h2>Review Notes</h2>
-      <ul>
-        <li>AI-assisted analysis is intended to support triage and should be manually validated before remediation decisions.</li>
-        <li>Severity may be adjusted during final review when business context or exploitability differs from scanner output.</li>
-      </ul>
-    </section>
+      <section class="panel" aria-labelledby="scope-title">
+        <div class="panel-header">
+          <div>
+            <h2 id="scope-title">Scope and Severity Breakdown</h2>
+            <p>Static context remains visible here while the detailed findings below can be searched and filtered.</p>
+          </div>
+        </div>
+        <div class="summary-grid">
+          {% for severity, count in findings_by_severity.items() %}
+          <div class="metric-card">
+            <span class="label">{{ severity }}</span>
+            <strong>{{ count }}</strong>
+          </div>
+          {% endfor %}
+        </div>
+        {% set live_urls = assets.live_urls | default([], true) -%}
+        {% if live_urls %}
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Live URL</th></tr>
+            </thead>
+            <tbody>
+              {% for url in live_urls %}
+              <tr><td><code>{{ url }}</code></td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p>No live URLs were recorded.</p>
+        {% endif %}
+      </section>
+
+      <section class="panel filter-panel" aria-label="Finding filters">
+        <div class="filter-grid">
+          <label class="search-box">
+            <span aria-hidden="true">/</span>
+            <input id="findingSearch" type="search" autocomplete="off" placeholder="Search by ID, title, target, component, or affected location">
+          </label>
+          <div class="filter-actions" role="group" aria-label="Severity filters">
+            <button class="filter-button is-active" type="button" data-severity-filter="all">All <span class="count-pill" data-count="all">0</span></button>
+            <button class="filter-button" type="button" data-severity-filter="critical">Critical <span class="count-pill" data-count="critical">0</span></button>
+            <button class="filter-button" type="button" data-severity-filter="high">High <span class="count-pill" data-count="high">0</span></button>
+            <button class="filter-button" type="button" data-severity-filter="medium">Medium <span class="count-pill" data-count="medium">0</span></button>
+            <button class="filter-button" type="button" data-severity-filter="low">Low <span class="count-pill" data-count="low">0</span></button>
+            <button class="filter-button" type="button" data-severity-filter="info">Info <span class="count-pill" data-count="info">0</span></button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="findings-title">
+        <div class="findings-toolbar">
+          <div>
+            <h2 id="findings-title">Detailed Findings</h2>
+            <span class="result-count"><span id="resultCount">{{ finding_count }}</span> matching findings</span>
+          </div>
+          <div class="utility-group">
+            <button class="utility-button" type="button" id="expandAll">Expand all</button>
+            <button class="utility-button" type="button" id="collapseAll">Collapse all</button>
+          </div>
+        </div>
+
+        <div class="finding-list" id="findingList">
+          {% for finding in findings %}
+          {% set finding_title = finding.ai_vulnerability_title or finding.vulnerability_name %}
+          {% set affected_location = finding.ai_affected_location or finding.url %}
+          <article
+            class="finding-card"
+            data-severity="{{ finding.final_severity | lower }}"
+            data-search="{{ finding.finding_id }} {{ finding_title }} {{ affected_location }} {{ finding.source_tool }} {{ finding.template_id }} {{ finding.target }} {{ finding.asset }}"
+          >
+            <button class="finding-toggle" type="button" aria-expanded="false">
+              <span class="finding-id">{{ finding.finding_id }}</span>
+              <span class="finding-title"><span>{{ finding_title }}</span></span>
+              <span class="badge {{ finding.final_severity | lower }}">{{ finding.final_severity }}</span>
+              <span class="finding-component">{{ finding.source_tool }} / {{ finding.template_id }}</span>
+              <span class="finding-target">{{ affected_location }}</span>
+              <span class="chevron" aria-hidden="true">&rsaquo;</span>
+            </button>
+
+            <div class="finding-panel" role="region" aria-label="{{ finding.finding_id }} details">
+              <div class="finding-content">
+                <div class="detail-grid">
+                  <div class="detail-card">
+                    <span class="label">Affected Location</span>
+                    <span class="value"><code>{{ affected_location }}</code></span>
+                  </div>
+                  <div class="detail-card">
+                    <span class="label">Scanner / Component</span>
+                    <span class="value">{{ finding.source_tool }} / <code>{{ finding.template_id }}</code></span>
+                  </div>
+                  <div class="detail-card">
+                    <span class="label">AI Confidence</span>
+                    <span class="value">{{ finding.ai_confidence or "unknown" }} | {{ finding.ai_status }}</span>
+                  </div>
+                  <div class="detail-card">
+                    <span class="label">Evidence Quality</span>
+                    <span class="value">{{ finding.ai_evidence_quality or "unknown" }}</span>
+                  </div>
+                  <div class="detail-card">
+                    <span class="label">Validation Status</span>
+                    <span class="value">{{ finding.ai_validation_status or "needs_manual_validation" }}</span>
+                  </div>
+                  <div class="detail-card">
+                    <span class="label">Remediation Owner</span>
+                    <span class="value">{{ finding.ai_remediation_owner or "site owner" }}</span>
+                  </div>
+                  <div class="detail-card">
+                    <span class="label">Technology Context</span>
+                    <span class="value">{{ finding.ai_technology_context or "N/A" }}</span>
+                  </div>
+                  <div class="detail-card">
+                    <span class="label">Tags</span>
+                    <span class="value">{{ finding.tags | join(", ") if finding.tags else "N/A" }}</span>
+                  </div>
+                </div>
+
+                <div class="content-grid">
+                  <div class="stack">
+                    <div class="content-block">
+                      <h4>Evidence</h4>
+                      <pre>{{ finding.evidence }}</pre>
+                    </div>
+
+                    <div class="content-block">
+                      <h4>How to Access and Verify</h4>
+                      {% if finding.ai_access_steps %}
+                      <ol>
+                        {% for step in finding.ai_access_steps %}
+                        <li>{{ step }}</li>
+                        {% endfor %}
+                      </ol>
+                      {% else %}
+                      <ol>
+                        <li>Open the affected location from an authorized testing environment.</li>
+                        <li>Compare the observed page or HTTP response with the scanner evidence.</li>
+                        <li>Confirm whether the behavior is expected for this website.</li>
+                      </ol>
+                      {% endif %}
+                    </div>
+
+                    <div class="content-block">
+                      <h4>Analysis</h4>
+                      <p>{{ finding.ai_explanation or "No AI explanation was available. Manual validation is recommended." }}</p>
+                      {% if finding.ai_confidence_reason %}
+                      <p><strong>Confidence Reason:</strong> {{ finding.ai_confidence_reason }}</p>
+                      {% endif %}
+                      {% if finding.ai_priority_rationale %}
+                      <p><strong>Priority Rationale:</strong> {{ finding.ai_priority_rationale }}</p>
+                      {% endif %}
+                    </div>
+
+                    <div class="content-block">
+                      <h4>Business Impact</h4>
+                      <p>{{ finding.ai_business_impact or "Manual review required." }}</p>
+                    </div>
+                  </div>
+
+                  <aside class="stack" aria-label="{{ finding.finding_id }} remediation">
+                    <div class="content-block">
+                      <h4>Recommended Remediation</h4>
+                      <p>{{ finding.ai_remediation or "Validate the finding and follow the source tool guidance." }}</p>
+                      {% if finding.ai_owner_remediation_steps %}
+                      <ol>
+                        {% for step in finding.ai_owner_remediation_steps %}
+                        <li>{{ step }}</li>
+                        {% endfor %}
+                      </ol>
+                      {% endif %}
+                    </div>
+
+                    {% if finding.ai_config_examples %}
+                    <div class="content-block">
+                      <h4>Defensive Config Examples</h4>
+                      {% for example in finding.ai_config_examples %}
+                      <pre>{{ example }}</pre>
+                      {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    {% if finding.ai_fix_validation_steps %}
+                    <div class="content-block">
+                      <h4>How to Confirm Fixed</h4>
+                      <ol>
+                        {% for step in finding.ai_fix_validation_steps %}
+                        <li>{{ step }}</li>
+                        {% endfor %}
+                      </ol>
+                    </div>
+                    {% endif %}
+
+                    {% if finding.ai_follow_up_scan_recommendations %}
+                    <div class="content-block">
+                      <h4>Safe Follow-Up Scan Recommendations</h4>
+                      <ul>
+                        {% for recommendation in finding.ai_follow_up_scan_recommendations %}
+                        <li>{{ recommendation }}</li>
+                        {% endfor %}
+                      </ul>
+                    </div>
+                    {% endif %}
+
+                    {% if finding.ai_likely_false_positive %}
+                    <div class="content-block">
+                      <h4>False Positive Note</h4>
+                      <p>{{ finding.ai_false_positive_reason or "AI marked this finding as a likely false positive." }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if finding.ai_references %}
+                    <div class="content-block">
+                      <h4>References</h4>
+                      <ul>
+                        {% for reference in finding.ai_references %}
+                        <li><a href="{{ reference }}">{{ reference }}</a></li>
+                        {% endfor %}
+                      </ul>
+                    </div>
+                    {% endif %}
+                  </aside>
+                </div>
+              </div>
+            </div>
+          </article>
+          {% else %}
+          <p>No detailed findings are available.</p>
+          {% endfor %}
+        </div>
+
+        <div class="empty-state" id="emptyState">
+          No findings match the current search and severity filters.
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Review Notes</h2>
+        <ul>
+          <li>AI-assisted analysis is intended to support triage and should be manually validated before remediation decisions.</li>
+          <li>Severity may be adjusted during final review when business context or exploitability differs from scanner output.</li>
+          <li>Use the filters above to triage large reports without losing executive context.</li>
+        </ul>
+      </section>
+    </div>
   </main>
+
+  <script>
+    (function () {
+      const findings = Array.from(document.querySelectorAll(".finding-card"));
+      const searchInput = document.getElementById("findingSearch");
+      const filterButtons = Array.from(document.querySelectorAll("[data-severity-filter]"));
+      const countBadges = Array.from(document.querySelectorAll("[data-count]"));
+      const resultCount = document.getElementById("resultCount");
+      const visibleFindings = document.getElementById("visibleFindings");
+      const emptyState = document.getElementById("emptyState");
+      const expandAllButton = document.getElementById("expandAll");
+      const collapseAllButton = document.getElementById("collapseAll");
+      let activeSeverity = "all";
+
+      function normalize(value) {
+        return (value || "").toString().toLowerCase().trim();
+      }
+
+      function setPanelState(card, shouldOpen) {
+        const button = card.querySelector(".finding-toggle");
+        const panel = card.querySelector(".finding-panel");
+        if (!button || !panel) return;
+
+        card.classList.toggle("is-open", shouldOpen);
+        button.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
+        panel.style.maxHeight = shouldOpen ? panel.scrollHeight + "px" : "0px";
+      }
+
+      function updateCounts() {
+        const counts = { all: findings.length, critical: 0, high: 0, medium: 0, low: 0, info: 0 };
+        findings.forEach((card) => {
+          const severity = normalize(card.dataset.severity);
+          if (Object.prototype.hasOwnProperty.call(counts, severity)) {
+            counts[severity] += 1;
+          }
+        });
+        countBadges.forEach((badge) => {
+          const key = badge.dataset.count;
+          badge.textContent = counts[key] || 0;
+        });
+      }
+
+      function applyFilters() {
+        const query = normalize(searchInput.value);
+        let visible = 0;
+
+        findings.forEach((card) => {
+          const matchesSeverity = activeSeverity === "all" || normalize(card.dataset.severity) === activeSeverity;
+          const matchesText = !query || normalize(card.dataset.search).includes(query);
+          const shouldShow = matchesSeverity && matchesText;
+          card.classList.toggle("is-hidden", !shouldShow);
+          if (shouldShow) {
+            visible += 1;
+          } else {
+            setPanelState(card, false);
+          }
+        });
+
+        resultCount.textContent = visible;
+        visibleFindings.textContent = visible;
+        emptyState.classList.toggle("is-visible", visible === 0);
+      }
+
+      findings.forEach((card) => {
+        const button = card.querySelector(".finding-toggle");
+        if (!button) return;
+        button.addEventListener("click", () => {
+          setPanelState(card, !card.classList.contains("is-open"));
+        });
+      });
+
+      filterButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          activeSeverity = button.dataset.severityFilter;
+          filterButtons.forEach((item) => item.classList.toggle("is-active", item === button));
+          applyFilters();
+        });
+      });
+
+      searchInput.addEventListener("input", applyFilters);
+
+      expandAllButton.addEventListener("click", () => {
+        findings.filter((card) => !card.classList.contains("is-hidden")).forEach((card) => setPanelState(card, true));
+      });
+
+      collapseAllButton.addEventListener("click", () => {
+        findings.forEach((card) => setPanelState(card, false));
+      });
+
+      window.addEventListener("resize", () => {
+        findings.filter((card) => card.classList.contains("is-open")).forEach((card) => {
+          const panel = card.querySelector(".finding-panel");
+          if (panel) panel.style.maxHeight = panel.scrollHeight + "px";
+        });
+      });
+
+      updateCounts();
+      applyFilters();
+    }());
+  </script>
 </body>
 </html>

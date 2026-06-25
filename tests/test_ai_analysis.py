@@ -38,6 +38,21 @@ def normalized_finding_two():
     )
 
 
+def ai_extra_fields():
+    return {
+        "ai_validation_status": "likely_true_positive",
+        "ai_evidence_quality": "moderate",
+        "ai_confidence_reason": "The scanner found a matching exposed endpoint.",
+        "ai_priority_rationale": "Review during the next maintenance window.",
+        "ai_remediation_owner": "application owner",
+        "ai_technology_context": "Swagger/OpenAPI documentation",
+        "ai_config_examples": ["Disable public Swagger UI in production."],
+        "ai_follow_up_scan_recommendations": [
+            "Retest with safe exposure and api template tags.",
+        ],
+    }
+
+
 def test_analyze_findings_skip_ai_returns_placeholders():
     analyses = analyze_findings(
         findings=[normalized_finding()],
@@ -141,6 +156,7 @@ def test_analyze_scan_output_writes_ai_analysis_json(monkeypatch, tmp_path):
             "ai_fix_validation_steps": [
                 "Reopen the URL and confirm the documentation is no longer public.",
             ],
+            **ai_extra_fields(),
             "ai_references": ["https://swagger.io/"],
             "_model_used": "gemini-2.5-flash-lite",
         }
@@ -159,6 +175,8 @@ def test_analyze_scan_output_writes_ai_analysis_json(monkeypatch, tmp_path):
     saved = json.loads((tmp_path / "ai_analysis.json").read_text(encoding="utf-8"))
     assert saved[0]["finding_id"] == "FIND-001"
     assert saved[0]["ai_confidence"] == "medium"
+    assert saved[0]["ai_evidence_quality"] == "moderate"
+    assert saved[0]["ai_remediation_owner"] == "application owner"
     assert saved[0]["ai_access_steps"][0].startswith("Open the Swagger UI")
     assert saved[0]["provider"] == "gemini"
 
@@ -186,6 +204,7 @@ def test_analyze_findings_batches_multiple_findings(monkeypatch):
                     "ai_access_steps": ["Open the affected Swagger URL."],
                     "ai_owner_remediation_steps": ["Restrict public access."],
                     "ai_fix_validation_steps": ["Confirm the URL is protected."],
+                    **ai_extra_fields(),
                     "ai_references": ["https://swagger.io/"],
                 },
                 {
@@ -202,6 +221,11 @@ def test_analyze_findings_batches_multiple_findings(monkeypatch):
                     "ai_access_steps": ["Inspect the HTTP response headers."],
                     "ai_owner_remediation_steps": ["Configure missing headers."],
                     "ai_fix_validation_steps": ["Confirm headers are present."],
+                    **{
+                        **ai_extra_fields(),
+                        "ai_technology_context": "HTTP response headers",
+                        "ai_remediation_owner": "DevOps",
+                    },
                     "ai_references": ["https://developer.mozilla.org/"],
                 },
             ],
@@ -273,6 +297,7 @@ def test_analyze_findings_uses_fallback_model_after_retryable_error(monkeypatch)
             "ai_access_steps": ["Open the affected Swagger URL."],
             "ai_owner_remediation_steps": ["Restrict public access."],
             "ai_fix_validation_steps": ["Confirm the URL is protected."],
+            **ai_extra_fields(),
             "ai_references": ["https://swagger.io/"],
             "_model_used": model,
         }

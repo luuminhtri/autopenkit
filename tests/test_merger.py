@@ -33,8 +33,14 @@ def ai_analysis(finding_id="FIND-001", ai_severity="low", status="analyzed"):
         ai_explanation="A public Swagger UI was detected.",
         ai_likely_false_positive=False,
         ai_false_positive_reason=None,
+        ai_validation_status="likely_true_positive",
+        ai_evidence_quality="moderate",
+        ai_confidence_reason="The scanner matched the Swagger UI endpoint.",
         ai_business_impact="May expose API documentation.",
         ai_remediation="Restrict access if it is not intended to be public.",
+        ai_priority_rationale="Review during the next maintenance window.",
+        ai_remediation_owner="application owner",
+        ai_technology_context="Swagger/OpenAPI documentation",
         ai_affected_location="https://demo.testfire.net/swagger/index.html",
         ai_access_steps=[
             "Open the Swagger UI URL from an authorized browser session.",
@@ -45,6 +51,10 @@ def ai_analysis(finding_id="FIND-001", ai_severity="low", status="analyzed"):
         ],
         ai_fix_validation_steps=[
             "Reopen the URL and confirm the documentation is no longer public.",
+        ],
+        ai_config_examples=["Disable public Swagger UI in production."],
+        ai_follow_up_scan_recommendations=[
+            "Retest with safe exposure and api template tags.",
         ],
         ai_references=["https://swagger.io/"],
         analyzed_at=datetime.now(timezone.utc),
@@ -69,6 +79,8 @@ def test_merge_findings_combines_normalized_and_ai_fields():
     assert final.final_severity_score == 2
     assert final.ai_status == "analyzed"
     assert final.ai_access_steps[0].startswith("Open the Swagger UI")
+    assert final.ai_evidence_quality == "moderate"
+    assert final.ai_remediation_owner == "application owner"
 
 
 def test_merge_findings_keeps_finding_when_ai_analysis_is_missing():
@@ -112,6 +124,7 @@ def test_merge_scan_output_writes_final_findings_json(tmp_path):
     assert saved[0]["finding_id"] == "FIND-001"
     assert saved[0]["ai_confidence"] == "medium"
     assert saved[0]["ai_owner_remediation_steps"][0].startswith("Restrict Swagger")
+    assert saved[0]["ai_follow_up_scan_recommendations"][0].startswith("Retest")
 
 
 def test_generate_reports_writes_markdown_and_html(tmp_path):
@@ -151,6 +164,13 @@ def test_generate_reports_writes_markdown_and_html(tmp_path):
     markdown = markdown_path.read_text(encoding="utf-8")
     html = html_path.read_text(encoding="utf-8")
     assert "How to Access and Verify" in markdown
+    assert "AI Executive Action Plan" in markdown
+    assert "Evidence quality" in markdown
+    assert "Safe Follow-Up Scan Recommendations" in markdown
     assert "Open the Swagger UI URL" in markdown
-    assert "Security Report" in html
+    assert "Security Intelligence Dashboard" in html
+    assert "findingSearch" in html
+    assert "data-severity-filter" in html
+    assert "finding-toggle" in html
     assert "How to Access and Verify" in html
+    assert "AI Executive Action Plan" in html

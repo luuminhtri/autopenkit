@@ -53,12 +53,20 @@ class AIAnalysis(BaseModel):
     ai_explanation: str
     ai_likely_false_positive: bool
     ai_false_positive_reason: Optional[str] = None
+    ai_validation_status: Optional[str] = None
+    ai_evidence_quality: Optional[str] = None
+    ai_confidence_reason: Optional[str] = None
     ai_business_impact: str
     ai_remediation: str
+    ai_priority_rationale: Optional[str] = None
+    ai_remediation_owner: Optional[str] = None
+    ai_technology_context: Optional[str] = None
     ai_affected_location: Optional[str] = None
     ai_access_steps: List[str] = Field(default_factory=list)
     ai_owner_remediation_steps: List[str] = Field(default_factory=list)
     ai_fix_validation_steps: List[str] = Field(default_factory=list)
+    ai_config_examples: List[str] = Field(default_factory=list)
+    ai_follow_up_scan_recommendations: List[str] = Field(default_factory=list)
     ai_references: List[str]
     analyzed_at: datetime
     model_used: str
@@ -89,12 +97,20 @@ class FinalFinding(BaseModel):
     ai_explanation: Optional[str] = None
     ai_likely_false_positive: Optional[bool] = None
     ai_false_positive_reason: Optional[str] = None
+    ai_validation_status: Optional[str] = None
+    ai_evidence_quality: Optional[str] = None
+    ai_confidence_reason: Optional[str] = None
     ai_business_impact: Optional[str] = None
     ai_remediation: Optional[str] = None
+    ai_priority_rationale: Optional[str] = None
+    ai_remediation_owner: Optional[str] = None
+    ai_technology_context: Optional[str] = None
     ai_affected_location: Optional[str] = None
     ai_access_steps: List[str] = Field(default_factory=list)
     ai_owner_remediation_steps: List[str] = Field(default_factory=list)
     ai_fix_validation_steps: List[str] = Field(default_factory=list)
+    ai_config_examples: List[str] = Field(default_factory=list)
+    ai_follow_up_scan_recommendations: List[str] = Field(default_factory=list)
     ai_references: List[str] = Field(default_factory=list)
     ai_status: str = "missing"
     model_used: Optional[str] = None

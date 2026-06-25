@@ -111,6 +111,9 @@ AutoPenKit can currently:
 * Sort findings by severity
 * Preserve partial findings if Nuclei times out after writing results
 * Generate AI-assisted analysis into `ai_analysis.json`
+* Ask AI to assess evidence quality, confidence rationale, validation status, remediation owner, and safe follow-up scan focus
+* Generate step-by-step verification and remediation guidance for authorized site owners
+* Generate an AI executive action plan in Markdown and HTML reports
 * Skip or safely fall back when an AI API key is not configured
 
 ---
@@ -178,6 +181,16 @@ When no API key is configured, AutoPenKit uses a safe placeholder analysis inste
 
 AI analysis uses `normalized_findings.json` and can batch multiple findings per Gemini request. Configure `ai.batch_size` in `config/settings.yaml` to reduce daily request usage; the default is 5 findings per request. If a batch fails, AutoPenKit falls back to single-finding analysis before writing placeholders.
 
+For each finding, AI output includes safe owner-focused guidance such as:
+
+* Evidence quality and confidence reason
+* Defensive validation status
+* Affected location and step-by-step verification
+* Business impact and priority rationale
+* Likely remediation owner and technology context
+* Owner remediation steps, defensive config examples, and fix validation steps
+* Safe follow-up scan recommendations for an authorized retest
+
 ---
 
 ## Expected Output
@@ -221,10 +234,8 @@ Any external target must be explicitly added to the authorized scope in the conf
 
 Possible future improvements include:
 
-* AI-assisted vulnerability analysis
-* Result merger
-* Markdown and HTML report generation
-* PDF export
+* PDF export for generated reports
+* Stronger AI summary generation across larger result sets
 * Stronger scan profiles such as `medium` and `deep`
 * Nmap reconnaissance
 * Nikto scanner support

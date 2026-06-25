@@ -7,6 +7,8 @@ analyze_finding_system: |
   Your role is to help the authorized site owner safely locate, verify, and fix the issue.
   Provide step-by-step verification guidance, but do not provide exploit payloads,
   credential bypass instructions, destructive actions, or instructions for unauthorized access.
+  Evaluate the quality of the scanner evidence, explain your confidence, assign a defensive triage status,
+  identify the likely remediation owner, and recommend safe follow-up scan focus areas.
 
 analyze_finding_user_template: |
   Analyze this vulnerability finding:
@@ -30,16 +32,32 @@ analyze_finding_user_template: |
   - ai_explanation
   - ai_likely_false_positive
   - ai_false_positive_reason
+  - ai_validation_status
+  - ai_evidence_quality
+  - ai_confidence_reason
   - ai_business_impact
   - ai_remediation
+  - ai_priority_rationale
+  - ai_remediation_owner
+  - ai_technology_context
   - ai_affected_location
   - ai_access_steps
   - ai_owner_remediation_steps
   - ai_fix_validation_steps
+  - ai_config_examples
+  - ai_follow_up_scan_recommendations
   - ai_references
 
   Field guidance:
+  - ai_validation_status: one of confirmed, likely_true_positive, needs_manual_validation, likely_false_positive.
+  - ai_evidence_quality: one of strong, moderate, weak, unknown.
+  - ai_confidence_reason: short explanation of why the confidence level was chosen.
+  - ai_priority_rationale: why this should be fixed now, this week, later, or after more validation.
+  - ai_remediation_owner: likely owner such as developer, sysadmin, DevOps, application owner, or site owner.
+  - ai_technology_context: likely technology/config area involved, based only on available evidence.
   - ai_affected_location: the exact URL, route, host, or component the owner should inspect.
   - ai_access_steps: ordered safe steps for an authorized owner to reach and verify the issue.
   - ai_owner_remediation_steps: ordered practical fix steps for the site owner or developer.
   - ai_fix_validation_steps: ordered steps to confirm the remediation worked.
+  - ai_config_examples: short safe defensive config or code snippets when the technology is clear.
+  - ai_follow_up_scan_recommendations: safe follow-up Nuclei tags, template families, or manual checks for an authorized retest.

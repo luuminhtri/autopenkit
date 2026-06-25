@@ -20,7 +20,27 @@ This report summarizes the automated security assessment results for `{{ metadat
 | Final findings | {{ finding_count }} |
 | AI-analyzed findings | {{ metadata.total_ai_analyzed_findings | default(ai_analyzed_count, true) }} |
 
-## 2. Severity Breakdown
+## 2. AI Executive Action Plan
+
+{% if executive_action_plan %}
+| Priority | Finding | Owner | Triage | Why | Next step |
+|---|---|---|---|---|---|
+{% for item in executive_action_plan -%}
+| {{ item.timeline }} | {{ item.finding_id }} - {{ item.title }} | {{ item.owner }} | {{ item.validation_status }} | {{ item.rationale }} | {{ item.next_step }} |
+{% endfor %}
+{% else %}
+No AI action plan is available.
+{% endif %}
+
+{% if follow_up_scan_recommendations %}
+**Safe Follow-Up Scan Focus**
+
+{% for recommendation in follow_up_scan_recommendations -%}
+- {{ recommendation }}
+{% endfor %}
+{% endif %}
+
+## 3. Severity Breakdown
 
 | Severity | Count |
 |---|---:|
@@ -30,7 +50,7 @@ This report summarizes the automated security assessment results for `{{ metadat
 | Low | {{ findings_by_severity.low }} |
 | Info | {{ findings_by_severity.info }} |
 
-## 3. Scope
+## 4. Scope
 
 {% set live_urls = assets.live_urls | default([], true) -%}
 {% if live_urls %}
@@ -43,19 +63,19 @@ This report summarizes the automated security assessment results for `{{ metadat
 No live URLs were recorded for this scan.
 {% endif %}
 
-## 4. Finding Overview
+## 5. Finding Overview
 
 {% if findings %}
-| ID | Severity | Confidence | Title | URL |
-|---|---|---|---|---|
+| ID | Severity | Confidence | Evidence | Triage | Owner | Title | URL |
+|---|---|---|---|---|---|---|---|
 {% for finding in findings -%}
-| {{ finding.finding_id }} | {{ finding.final_severity | upper }} | {{ finding.ai_confidence or "unknown" }} | {{ finding.ai_vulnerability_title or finding.vulnerability_name }} | `{{ finding.url }}` |
+| {{ finding.finding_id }} | {{ finding.final_severity | upper }} | {{ finding.ai_confidence or "unknown" }} | {{ finding.ai_evidence_quality or "unknown" }} | {{ finding.ai_validation_status or "needs_manual_validation" }} | {{ finding.ai_remediation_owner or "site owner" }} | {{ finding.ai_vulnerability_title or finding.vulnerability_name }} | `{{ finding.url }}` |
 {% endfor %}
 {% else %}
 No findings were produced.
 {% endif %}
 
-## 5. Detailed Findings
+## 6. Detailed Findings
 
 {% for finding in findings %}
 ### {{ finding.finding_id }} - {{ finding.ai_vulnerability_title or finding.vulnerability_name }}
@@ -65,6 +85,10 @@ No findings were produced.
 | Final severity | **{{ finding.final_severity | upper }}** |
 | Scanner severity | {{ finding.severity | upper }} |
 | AI confidence | {{ finding.ai_confidence or "unknown" }} |
+| Evidence quality | {{ finding.ai_evidence_quality or "unknown" }} |
+| Validation status | {{ finding.ai_validation_status or "needs_manual_validation" }} |
+| Remediation owner | {{ finding.ai_remediation_owner or "site owner" }} |
+| Technology context | {{ finding.ai_technology_context or "N/A" }} |
 | AI status | {{ finding.ai_status }} |
 | Affected location | `{{ finding.ai_affected_location or finding.url }}` |
 | Source | {{ finding.source_tool }} / `{{ finding.template_id }}` |
@@ -92,6 +116,18 @@ No findings were produced.
 
 {{ finding.ai_explanation or "No AI explanation was available. Manual validation is recommended." }}
 
+{% if finding.ai_confidence_reason %}
+**Confidence Reason**
+
+{{ finding.ai_confidence_reason }}
+{% endif %}
+
+{% if finding.ai_priority_rationale %}
+**Priority Rationale**
+
+{{ finding.ai_priority_rationale }}
+{% endif %}
+
 **Business Impact**
 
 {{ finding.ai_business_impact or "Manual review required." }}
@@ -108,11 +144,29 @@ No findings were produced.
 {% endfor %}
 {% endif %}
 
+{% if finding.ai_config_examples %}
+**Defensive Config Examples**
+
+{% for example in finding.ai_config_examples -%}
+```text
+{{ example }}
+```
+{% endfor %}
+{% endif %}
+
 {% if finding.ai_fix_validation_steps %}
 **How to Confirm Fixed**
 
 {% for step in finding.ai_fix_validation_steps -%}
 {{ loop.index }}. {{ step }}
+{% endfor %}
+{% endif %}
+
+{% if finding.ai_follow_up_scan_recommendations %}
+**Safe Follow-Up Scan Recommendations**
+
+{% for recommendation in finding.ai_follow_up_scan_recommendations -%}
+- {{ recommendation }}
 {% endfor %}
 {% endif %}
 
@@ -136,7 +190,7 @@ No findings were produced.
 No detailed findings are available.
 {% endfor %}
 
-## 6. Notes
+## 7. Notes
 
 - AI-assisted analysis is intended to support triage and should be manually validated before remediation decisions.
 - Severity may be adjusted during final review when business context or exploitability differs from scanner output.

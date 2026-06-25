@@ -51,6 +51,7 @@ def build_report_context(output_dir: str) -> Dict[str, Any]:
     assets = _load_json_if_exists(output_path / "assets.json", {})
     findings_by_severity = count_final_findings_by_severity(final_findings)
     risk_level = _overall_risk_level(findings_by_severity)
+    executive_action_plan = _build_executive_action_plan(final_findings)
     ai_analyzed_count = sum(
         1 for finding in final_findings if finding.ai_status == "analyzed"
     )
@@ -63,6 +64,10 @@ def build_report_context(output_dir: str) -> Dict[str, Any]:
         "ai_analyzed_count": ai_analyzed_count,
         "findings_by_severity": findings_by_severity,
         "risk_level": risk_level,
+        "executive_action_plan": executive_action_plan,
+        "follow_up_scan_recommendations": _collect_follow_up_scan_recommendations(
+            final_findings
+        ),
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -79,6 +84,65 @@ def _overall_risk_level(findings_by_severity: Dict[str, int]) -> str:
     if findings_by_severity.get("info", 0) > 0:
         return "Informational"
     return "No Findings"
+
+
+def _recommended_timeline(finding: FinalFinding) -> str:
+    severity = finding.final_severity.lower()
+    if severity in {"critical", "high"}:
+        return "Immediate"
+    if severity == "medium":
+        return "This week"
+    if finding.ai_validation_status == "confirmed":
+        return "This week"
+    if finding.ai_validation_status == "likely_false_positive":
+        return "Backlog after validation"
+    return "Backlog or next maintenance window"
+
+
+def _first_step(finding: FinalFinding) -> str:
+    if finding.ai_access_steps:
+        return finding.ai_access_steps[0]
+    if finding.ai_owner_remediation_steps:
+        return finding.ai_owner_remediation_steps[0]
+    return "Validate the scanner evidence at the affected location."
+
+
+def _build_executive_action_plan(
+    findings: List[FinalFinding],
+) -> List[Dict[str, str]]:
+    plan = []
+    for finding in findings:
+        plan.append(
+            {
+                "finding_id": finding.finding_id,
+                "title": finding.ai_vulnerability_title or finding.vulnerability_name,
+                "severity": finding.final_severity,
+                "timeline": _recommended_timeline(finding),
+                "owner": finding.ai_remediation_owner or "site owner",
+                "validation_status": (
+                    finding.ai_validation_status or "needs_manual_validation"
+                ),
+                "rationale": finding.ai_priority_rationale
+                or finding.ai_confidence_reason
+                or "Prioritize after manual validation.",
+                "next_step": _first_step(finding),
+            }
+        )
+    return plan
+
+
+def _collect_follow_up_scan_recommendations(
+    findings: List[FinalFinding],
+) -> List[str]:
+    recommendations = []
+    seen = set()
+    for finding in findings:
+        for recommendation in finding.ai_follow_up_scan_recommendations:
+            normalized = recommendation.strip()
+            if normalized and normalized not in seen:
+                recommendations.append(normalized)
+                seen.add(normalized)
+    return recommendations
 
 
 def generate_reports(
