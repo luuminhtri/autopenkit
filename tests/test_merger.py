@@ -157,7 +157,12 @@ def test_generate_reports_writes_markdown_and_html(tmp_path):
 
     markdown_path = tmp_path / "reports" / "report.md"
     html_path = tmp_path / "reports" / "report.html"
+    metadata = json.loads((tmp_path / "scan_metadata.json").read_text(encoding="utf-8"))
     assert result["finding_count"] == 1
+    assert result["report_paths"]["markdown"] == str(markdown_path)
+    assert result["report_paths"]["html"] == str(html_path)
+    assert metadata["report_paths"] == result["report_paths"]
+    assert metadata["report_generated_at"]
     assert markdown_path.exists()
     assert html_path.exists()
     assert "Public Swagger API" in markdown_path.read_text(encoding="utf-8")

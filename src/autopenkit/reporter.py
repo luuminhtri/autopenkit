@@ -44,6 +44,23 @@ def _render_template(template_dir: Path, template_name: str, context: Dict[str, 
     return template.render(**context)
 
 
+def _update_report_metadata(
+    output_path: Path,
+    report_paths: Dict[str, str],
+    generated_at: str,
+) -> None:
+    metadata_path = output_path / "scan_metadata.json"
+    metadata = _load_json_if_exists(metadata_path, {})
+    if not isinstance(metadata, dict):
+        raise ReportError(f"Expected metadata object in {metadata_path}.")
+
+    metadata["report_generated_at"] = generated_at
+    metadata["report_paths"] = report_paths
+
+    with metadata_path.open("w", encoding="utf-8") as file:
+        json.dump(metadata, file, indent=2, ensure_ascii=False)
+
+
 def build_report_context(output_dir: str) -> Dict[str, Any]:
     output_path = Path(output_dir)
     final_findings = _load_final_findings(output_path)
@@ -169,6 +186,8 @@ def generate_reports(
     html_path = reports_dir / "report.html"
     html_path.write_text(html_report, encoding="utf-8")
     report_paths["html"] = str(html_path)
+
+    _update_report_metadata(output_path, report_paths, context["generated_at"])
 
     return {
         "reports_dir": str(reports_dir),

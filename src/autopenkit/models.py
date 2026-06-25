@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import Dict, List, Optional
 from pydantic import BaseModel, Field
 
 
@@ -146,3 +146,5 @@ class ScanMetadata(BaseModel):
     scan_warning: Optional[str] = None
     ai_enabled: bool
     output_dir: str
+    report_generated_at: Optional[datetime] = None
+    report_paths: Dict[str, str] = Field(default_factory=dict)
